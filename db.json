@@ -1,0 +1,21 @@
+{
+  "bookings": [
+    {
+      "id": "SKI-1774471131286",
+      "serviceId": "edge-sharpening",
+      "serviceName": "Edge Sharpening",
+      "servicePrice": 35,
+      "date": "2026-03-25",
+      "time": "16:00",
+      "customerName": "Test Customer",
+      "phone": "8255212075",
+      "email": "test",
+      "notes": "test",
+      "status": "confirmed",
+      "reviewToken": "af4f91219638c0d69c7fa4cbf6d09953",
+      "reviewSentAt": "2026-03-25T20:41:00.262Z",
+      "createdAt": "2026-03-25T20:38:51.289Z"
+    }
+  ],
+  "feedback": []
+}

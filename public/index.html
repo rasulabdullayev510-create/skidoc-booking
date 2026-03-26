@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Ski Doc Calgary — Book a Service</title>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --white:#ffffff;--bg:#f0f6ff;--rule:#d0e2f8;--rule2:#b8d0f0;
+  --ink:#0a1628;--ink2:#2d4a7a;--ink3:#6b8ab5;
+  --blue:#2563eb;--blue-light:#eff6ff;--blue-mid:#bfdbfe;--blue-dark:#1d4ed8;
+  --green:#16a34a;--green-light:#dcfce7;--red:#dc2626;--red-light:#fee2e2;
+}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--ink);font-family:'Plus Jakarta Sans',sans-serif;font-weight:400;min-height:100vh;overflow-x:hidden}
+.shell{display:grid;grid-template-columns:380px 1fr;min-height:100vh}
+.left{position:sticky;top:0;height:100vh;background:var(--blue);display:flex;flex-direction:column;padding:44px 40px 36px;overflow:hidden}
+.left::before{content:'';position:absolute;top:-60px;right:-60px;width:280px;height:280px;border-radius:50%;background:rgba(255,255,255,0.06);pointer-events:none}
+.left::after{content:'';position:absolute;bottom:-80px;left:-40px;width:240px;height:240px;border-radius:50%;background:rgba(255,255,255,0.04);pointer-events:none}
+.left-top{flex:1;position:relative;z-index:1}
+.brand{display:flex;align-items:center;gap:10px;margin-bottom:52px}
+.brand-icon{width:36px;height:36px;border-radius:10px;background:rgba(255,255,255,0.15);display:flex;align-items:center;justify-content:center;font-size:18px}
+.brand-name{font-size:15px;font-weight:700;color:rgba(255,255,255,0.95)}
+.left-headline{font-size:36px;font-weight:700;line-height:1.15;color:var(--white);margin-bottom:14px;letter-spacing:-0.02em}
+.left-headline span{color:rgba(255,255,255,0.45)}
+.left-sub{font-size:13px;color:rgba(255,255,255,0.5);line-height:1.75;max-width:280px;margin-bottom:40px}
+.sum-block{background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.12);border-radius:14px;padding:20px;margin-bottom:24px;min-height:136px}
+.sum-hdr{font-size:10px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:rgba(255,255,255,0.4);margin-bottom:14px}
+.sum-empty{font-size:13px;color:rgba(255,255,255,0.3);line-height:1.65;font-style:italic}
+.sum-line{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid rgba(255,255,255,0.08)}
+.sum-line:last-child{border-bottom:none}
+.sum-lbl{font-size:12px;color:rgba(255,255,255,0.4)}
+.sum-val{font-size:12px;font-weight:600;color:rgba(255,255,255,0.85);max-width:170px;text-align:right}
+.sum-price-row{display:flex;justify-content:space-between;align-items:center;margin-top:12px;padding-top:12px;border-top:1px solid rgba(255,255,255,0.12)}
+.sum-price-lbl{font-size:11px;color:rgba(255,255,255,0.35);text-transform:uppercase;letter-spacing:0.08em}
+.sum-price-num{font-size:32px;font-weight:700;color:var(--white);letter-spacing:-0.02em}
+.step-nav{display:flex;flex-direction:column;gap:8px;position:relative;z-index:1}
+.snav{display:flex;align-items:center;gap:10px;font-size:12px;font-weight:500;color:rgba(255,255,255,0.3);transition:color 0.25s}
+.snav.active{color:rgba(255,255,255,0.95)}
+.snav.done{color:rgba(255,255,255,0.45)}
+.snav-pip{width:22px;height:22px;border-radius:50%;border:1.5px solid rgba(255,255,255,0.2);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;flex-shrink:0;transition:all 0.25s}
+.snav.active .snav-pip{background:rgba(255,255,255,0.2);border-color:rgba(255,255,255,0.4);color:white}
+.snav.done .snav-pip{background:rgba(255,255,255,0.1);border-color:rgba(255,255,255,0.1);color:rgba(255,255,255,0.5)}
+.right{background:var(--white);padding:56px 56px 90px;max-width:640px}
+.panel{display:none;animation:up 0.3s ease both}
+.panel.active{display:block}
+@keyframes up{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+.p-eye{font-size:11px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:var(--blue);margin-bottom:8px}
+.p-title{font-size:36px;font-weight:700;letter-spacing:-0.02em;line-height:1.1;color:var(--ink);margin-bottom:6px}
+.p-sub{font-size:14px;color:var(--ink3);line-height:1.7;margin-bottom:36px}
+.svc-list{display:flex;flex-direction:column;gap:10px}
+.svc-card{border:1.5px solid var(--rule);border-radius:14px;padding:20px 22px;cursor:pointer;transition:all 0.15s;display:grid;grid-template-columns:1fr auto;gap:12px;align-items:center;background:var(--white)}
+.svc-card:hover{border-color:var(--blue-mid);background:var(--blue-light);transform:translateY(-1px);box-shadow:0 4px 16px rgba(37,99,235,0.08)}
+.svc-card.sel{border-color:var(--blue);background:var(--blue-light);box-shadow:0 0 0 3px rgba(37,99,235,0.12)}
+.svc-pill{display:inline-block;font-size:10px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--ink3);background:var(--bg);border-radius:5px;padding:3px 8px;margin-bottom:6px}
+.svc-card.sel .svc-pill{background:var(--blue-mid);color:var(--blue-dark)}
+.svc-name{font-size:15px;font-weight:600;color:var(--ink);margin-bottom:3px}
+.svc-desc{font-size:12px;color:var(--ink3);line-height:1.5}
+.svc-right{text-align:right;flex-shrink:0}
+.svc-price{font-size:26px;font-weight:700;color:var(--ink);letter-spacing:-0.02em;line-height:1;margin-bottom:2px}
+.svc-card.sel .svc-price{color:var(--blue)}
+.svc-dur{font-size:11px;color:var(--ink3);font-weight:500}
+.cal-wrap{display:grid;grid-template-columns:1fr 1fr;gap:32px;align-items:start}
+.cal-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
+.cal-month{font-size:14px;font-weight:700;color:var(--ink)}
+.cal-arrow{width:30px;height:30px;border:1.5px solid var(--rule);border-radius:8px;background:var(--white);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:13px;color:var(--ink2);transition:all 0.13s}
+.cal-arrow:hover{border-color:var(--blue);color:var(--blue);background:var(--blue-light)}
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:2px}
+.cal-dhdr{text-align:center;font-size:10px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:var(--ink3);padding-bottom:8px}
+.cal-d{aspect-ratio:1;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:500;color:var(--ink2);border-radius:8px;cursor:pointer;transition:all 0.11s;border:1.5px solid transparent}
+.cal-d:hover:not(.dis):not(.empty){background:var(--blue-light);color:var(--blue);border-color:var(--blue-mid)}
+.cal-d.today{color:var(--blue);font-weight:700}
+.cal-d.picked{background:var(--blue);color:var(--white);border-color:var(--blue)}
+.cal-d.dis{color:var(--rule2);cursor:default}
+.cal-d.empty{cursor:default}
+.slots-lbl{font-size:11px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--ink3);margin-bottom:12px}
+.slots-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;max-height:290px;overflow-y:auto;padding-right:3px}
+.slot{border:1.5px solid var(--rule);border-radius:9px;padding:9px 4px;text-align:center;font-size:12px;font-weight:600;color:var(--ink2);cursor:pointer;transition:all 0.11s;background:var(--white)}
+.slot:hover{border-color:var(--blue-mid);color:var(--blue);background:var(--blue-light)}
+.slot.picked{background:var(--blue);border-color:var(--blue);color:var(--white)}
+.slot.booked{opacity:0.25;cursor:not-allowed;text-decoration:line-through;pointer-events:none}
+.no-slot{font-size:13px;color:var(--ink3);padding:12px 0;line-height:1.6}
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.form-full{grid-column:1/-1}
+.field{display:flex;flex-direction:column;gap:6px}
+.field label{font-size:11px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--ink3)}
+.field input,.field textarea{border:1.5px solid var(--rule);border-radius:10px;padding:12px 14px;font-family:'Plus Jakarta Sans',sans-serif;font-size:14px;color:var(--ink);background:var(--white);outline:none;transition:all 0.13s;-webkit-appearance:none}
+.field input:focus,.field textarea:focus{border-color:var(--blue);background:var(--blue-light);box-shadow:0 0 0 3px rgba(37,99,235,0.08)}
+.field input::placeholder,.field textarea::placeholder{color:#b0c4de}
+.field textarea{resize:none;min-height:82px}
+.field input.err{border-color:var(--red);background:var(--red-light)}
+.btn-row{display:flex;gap:10px;align-items:center;margin-top:32px}
+.btn-back{font-size:13px;font-weight:600;color:var(--ink3);background:var(--white);border:1.5px solid var(--rule);border-radius:10px;padding:12px 18px;cursor:pointer;transition:all 0.13s;font-family:'Plus Jakarta Sans',sans-serif;white-space:nowrap}
+.btn-back:hover{border-color:var(--rule2);color:var(--ink)}
+.btn-prime{flex:1;background:var(--blue);color:var(--white);border:none;border-radius:10px;padding:14px 24px;font-family:'Plus Jakarta Sans',sans-serif;font-size:14px;font-weight:700;cursor:pointer;transition:all 0.15s}
+.btn-prime:hover:not(:disabled){background:var(--blue-dark);transform:translateY(-1px);box-shadow:0 6px 20px rgba(37,99,235,0.25)}
+.btn-prime:disabled{opacity:0.35;cursor:default;transform:none;box-shadow:none}
+.done-wrap{text-align:center;padding:12px 0 60px}
+.done-check{width:72px;height:72px;border-radius:50%;background:var(--green-light);display:flex;align-items:center;justify-content:center;margin:0 auto 28px}
+.done-check svg{width:32px;height:32px}
+.done-title{font-size:40px;font-weight:700;letter-spacing:-0.02em;color:var(--ink);margin-bottom:8px}
+.done-sub{font-size:14px;color:var(--ink3);line-height:1.75;max-width:340px;margin:0 auto 28px}
+.done-detail{border:1.5px solid var(--rule);border-radius:14px;padding:20px 24px;max-width:340px;margin:0 auto 28px;text-align:left;background:var(--bg)}
+.d-row{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--rule);font-size:13px}
+.d-row:last-child{border-bottom:none}
+.d-lbl{color:var(--ink3);font-weight:500}
+.d-val{font-weight:700;color:var(--ink)}
+.btn-again{background:var(--ink);color:var(--white);border:none;border-radius:10px;padding:13px 28px;font-family:'Plus Jakarta Sans',sans-serif;font-size:14px;font-weight:700;cursor:pointer;transition:all 0.15s}
+.btn-again:hover{background:var(--blue)}
+.spin-row{display:flex;gap:5px;padding:18px 0}
+.spin-d{width:7px;height:7px;border-radius:50%;background:var(--blue-mid);animation:pulse 1s ease infinite}
+.spin-d:nth-child(2){animation-delay:0.15s}.spin-d:nth-child(3){animation-delay:0.3s}
+@keyframes pulse{0%,100%{opacity:0.3;transform:scale(0.8)}50%{opacity:1;transform:scale(1)}}
+@media(max-width:900px){
+  .shell{grid-template-columns:1fr}
+  .left{position:relative;height:auto;padding:32px 28px}
+  .left-headline{font-size:28px}
+  .right{padding:36px 24px 70px;max-width:100%}
+  .cal-wrap{grid-template-columns:1fr;gap:24px}
+  .form-grid{grid-template-columns:1fr}
+  .form-full{grid-column:auto}
+}
+::-webkit-scrollbar{width:4px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:var(--blue-mid);border-radius:4px}
+</style>
+</head>
+<body>
+<div class="shell">
+<div class="left">
+  <div class="left-top">
+    <div class="brand">
+      <div class="brand-icon">⛷️</div>
+      <span class="brand-name">Ski Doc Calgary</span>
+    </div>
+    <div class="left-headline">Book your<br><span>tuneup</span><br>online.</div>
+    <p class="left-sub">Calgary's ski & snowboard specialists. Sharp edges, fast turnaround — ready for the mountain.</p>
+    <div class="sum-block">
+      <div class="sum-hdr">Booking Summary</div>
+      <div class="sum-empty" id="sum-empty">Select a service to get started.</div>
+      <div id="sum-lines" style="display:none"></div>
+    </div>
+  </div>
+  <div class="step-nav">
+    <div class="snav active" id="snav-1"><div class="snav-pip">1</div>Choose service</div>
+    <div class="snav" id="snav-2"><div class="snav-pip">2</div>Pick date & time</div>
+    <div class="snav" id="snav-3"><div class="snav-pip">3</div>Your details</div>
+  </div>
+</div>
+<div class="right">
+  <div class="panel active" id="panel-1">
+    <div class="p-eye">Step 1 of 3</div>
+    <div class="p-title">What do you need?</div>
+    <p class="p-sub">All services include a quick condition check. No payment needed until pickup.</p>
+    <div class="svc-list" id="svc-list">
+      <div class="spin-row"><div class="spin-d"></div><div class="spin-d"></div><div class="spin-d"></div></div>
+    </div>
+  </div>
+  <div class="panel" id="panel-2">
+    <div class="p-eye">Step 2 of 3</div>
+    <div class="p-title">Pick a date & time.</div>
+    <p class="p-sub">Open Monday – Saturday, 9 AM to 5 PM. Closed Sundays.</p>
+    <div class="cal-wrap">
+      <div>
+        <div class="cal-hdr">
+          <button class="cal-arrow" onclick="changeMonth(-1)">←</button>
+          <span class="cal-month" id="cal-month"></span>
+          <button class="cal-arrow" onclick="changeMonth(1)">→</button>
+        </div>
+        <div class="cal-grid" id="cal-grid"></div>
+      </div>
+      <div>
+        <div class="slots-lbl">Available times</div>
+        <div id="slots-wrap"><p class="no-slot">Select a date to see available times.</p></div>
+      </div>
+    </div>
+    <div class="btn-row">
+      <button class="btn-back" onclick="goStep(1)">← Back</button>
+      <button class="btn-prime" id="btn-2" onclick="goStep(3)" disabled>Continue →</button>
+    </div>
+  </div>
+  <div class="panel" id="panel-3">
+    <div class="p-eye">Step 3 of 3</div>
+    <div class="p-title">Almost there.</div>
+    <p class="p-sub">We'll send a confirmation text right away and follow up after your service.</p>
+    <div class="form-grid">
+      <div class="field"><label>Full Name *</label><input type="text" id="inp-name" placeholder="Alex Johnson" autocomplete="name"/></div>
+      <div class="field"><label>Phone Number *</label><input type="tel" id="inp-phone" placeholder="+1 (403) 555-0123" autocomplete="tel" inputmode="tel"/></div>
+      <div class="field form-full"><label>Email Address</label><input type="email" id="inp-email" placeholder="alex@email.com (optional)" autocomplete="email"/></div>
+      <div class="field form-full"><label>Notes</label><textarea id="inp-notes" placeholder="Edge angle preference, damage to fix, anything else..."></textarea></div>
+    </div>
+    <p style="font-size:12px;color:var(--ink3);line-height:1.65;margin-top:16px">You'll get a confirmation text immediately, and a quick follow-up the day after your service.</p>
+    <div class="btn-row">
+      <button class="btn-back" onclick="goStep(2)">← Back</button>
+      <button class="btn-prime" id="btn-confirm" onclick="confirmBooking()"><span id="conf-txt">Confirm Booking</span></button>
+    </div>
+  </div>
+  <div class="panel" id="panel-done">
+    <div class="done-wrap">
+      <div class="done-check">
+        <svg viewBox="0 0 32 32" fill="none"><path d="M7 16L13 22L25 10" stroke="#16a34a" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </div>
+      <div class="done-title">You're booked!</div>
+      <p class="done-sub">We'll have your gear dialled in and ready. Confirmation text is on its way.</p>
+      <div class="done-detail" id="done-detail"></div>
+      <button class="btn-again" onclick="reset()">Book Another Service</button>
+    </div>
+  </div>
+</div>
+</div>
+<script>
+const API = window.location.origin;
+let services = [], sel = { service:null, date:null, time:null };
+let calMo = new Date(); calMo.setDate(1);
+
+async function loadServices() {
+  try {
+    const r = await fetch(API + '/api/services');
+    services = await r.json();
+    renderSvcs();
+  } catch(e) {
+    document.getElementById('svc-list').innerHTML = '<p style="color:var(--ink3)">Could not load — please refresh.</p>';
+  }
+}
+
+function renderSvcs() {
+  const cats = { ski:'Ski', snowboard:'Snowboard' };
+  document.getElementById('svc-list').innerHTML = services.map(function(s) {
+    return '<div class="svc-card' + (sel.service && sel.service.id===s.id ? ' sel' : '') + '" onclick="pickSvc(\'' + s.id + '\')">' +
+      '<div><div class="svc-pill">' + (cats[s.category]||s.category) + '</div>' +
+      '<div class="svc-name">' + s.name + '</div>' +
+      '<div class="svc-desc">' + s.description + '</div></div>' +
+      '<div class="svc-right"><div class="svc-price">$' + s.price + '</div><div class="svc-dur">' + s.duration + ' min</div></div>' +
+      '</div>';
+  }).join('');
+}
+
+function pickSvc(id) {
+  sel.service = null;
+  for(var i=0; i<services.length; i++) { if(services[i].id===id) sel.service = services[i]; }
+  sel.date = null; sel.time = null;
+  renderSvcs(); updateSum();
+  setTimeout(function(){ goStep(2); }, 240);
+}
+
+function renderCal() {
+  var y=calMo.getFullYear(), m=calMo.getMonth();
+  var months=['January','February','March','April','May','June','July','August','September','October','November','December'];
+  document.getElementById('cal-month').textContent = months[m] + ' ' + y;
+  var first=new Date(y,m,1).getDay(), days=new Date(y,m+1,0).getDate();
+  var today=new Date(); today.setHours(0,0,0,0);
+  var h='';
+  var dhd=['Su','Mo','Tu','We','Th','Fr','Sa'];
+  for(var i=0;i<7;i++) h+='<div class="cal-dhdr">'+dhd[i]+'</div>';
+  for(var i=0;i<first;i++) h+='<div class="cal-d empty"></div>';
+  for(var d=1;d<=days;d++) {
+    var dt=new Date(y,m,d);
+    var mo=String(m+1).padStart(2,'0'), dd=String(d).padStart(2,'0');
+    var ds=y+'-'+mo+'-'+dd;
+    var past=dt<today, sun=dt.getDay()===0, picked=ds===sel.date, tdy=dt.getTime()===today.getTime();
+    var cls='cal-d';
+    if(past||sun) cls+=' dis'; else if(picked) cls+=' picked'; else if(tdy) cls+=' today';
+    var click = (!past&&!sun) ? ' onclick="pickDate(\''+ds+'\')"' : '';
+    h+='<div class="'+cls+'"'+click+'>'+d+'</div>';
+  }
+  document.getElementById('cal-grid').innerHTML = h;
+}
+
+function changeMonth(dir) {
+  calMo = new Date(calMo.getFullYear(), calMo.getMonth()+dir, 1);
+  renderCal();
+}
+
+async function pickDate(ds) {
+  sel.date=ds; sel.time=null; renderCal(); updateSum();
+  document.getElementById('btn-2').disabled=true;
+  document.getElementById('slots-wrap').innerHTML='<div class="spin-row"><div class="spin-d"></div><div class="spin-d"></div><div class="spin-d"></div></div>';
+  try {
+    var r = await fetch(API + '/api/availability?date=' + ds);
+    var data = await r.json();
+    renderSlots(data.slots);
+  } catch(e) {
+    document.getElementById('slots-wrap').innerHTML='<p class="no-slot">Could not load — try again.</p>';
+  }
+}
+
+function fmt12(t) {
+  var parts=t.split(':'), hr=parseInt(parts[0]), m=parts[1];
+  return (hr>12?hr-12:(hr===0?12:hr))+':'+m+' '+(hr>=12?'PM':'AM');
+}
+
+function renderSlots(slots) {
+  if(!slots || !slots.length) {
+    document.getElementById('slots-wrap').innerHTML='<p class="no-slot">No availability this day.<br>Try another date.</p>';
+    return;
+  }
+  var html = '<div class="slots-grid">';
+  for(var i=0; i<slots.length; i++) {
+    var s = slots[i];
+    if(s.status === 'booked') {
+      html += '<div class="slot booked">' + fmt12(s.time) + '</div>';
+    } else {
+      var picked = sel.time === s.time ? ' picked' : '';
+      html += '<div class="slot' + picked + '" onclick="pickSlot(\'' + s.time + '\')">' + fmt12(s.time) + '</div>';
+    }
+  }
+  html += '</div>';
+  document.getElementById('slots-wrap').innerHTML = html;
+}
+
+function pickSlot(t) {
+  sel.time = t;
+  var slots = document.querySelectorAll('.slot:not(.booked)');
+  for(var i=0; i<slots.length; i++) {
+    slots[i].classList.toggle('picked', slots[i].getAttribute('onclick') === "pickSlot('"+t+"')");
+  }
+  document.getElementById('btn-2').disabled = false;
+  updateSum();
+}
+
+function fmtDate(d) {
+  if(!d) return '—';
+  var parts=d.split('-');
+  var ms=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  return ms[parseInt(parts[1])-1]+' '+parseInt(parts[2])+', '+parts[0];
+}
+
+function updateSum() {
+  var e=document.getElementById('sum-empty'), l=document.getElementById('sum-lines');
+  if(!sel.service) { e.style.display='block'; l.style.display='none'; return; }
+  e.style.display='none'; l.style.display='block';
+  l.innerHTML =
+    '<div class="sum-line"><span class="sum-lbl">Service</span><span class="sum-val">'+sel.service.name+'</span></div>' +
+    '<div class="sum-line"><span class="sum-lbl">Duration</span><span class="sum-val">'+sel.service.duration+' min</span></div>' +
+    '<div class="sum-line"><span class="sum-lbl">Date</span><span class="sum-val">'+fmtDate(sel.date)+'</span></div>' +
+    '<div class="sum-line"><span class="sum-lbl">Time</span><span class="sum-val">'+(sel.time?fmt12(sel.time):'—')+'</span></div>' +
+    '<div class="sum-price-row"><span class="sum-price-lbl">Total</span><span class="sum-price-num">$'+sel.service.price+'</span></div>';
+}
+
+function goStep(n) {
+  var panels = document.querySelectorAll('.panel');
+  for(var i=0; i<panels.length; i++) panels[i].classList.remove('active');
+  document.getElementById('panel-'+n).classList.add('active');
+  for(var i=1; i<=3; i++) {
+    var el = document.getElementById('snav-'+i);
+    el.classList.remove('active','done');
+    if(i<n) el.classList.add('done');
+    if(i===n) el.classList.add('active');
+  }
+  if(n===2) renderCal();
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+
+async function confirmBooking() {
+  var name = document.getElementById('inp-name').value.trim();
+  var phone = document.getElementById('inp-phone').value.trim();
+  document.getElementById('inp-name').classList.toggle('err', !name);
+  document.getElementById('inp-phone').classList.toggle('err', !phone);
+  if(!name||!phone) return;
+  var btn = document.getElementById('btn-confirm');
+  document.getElementById('conf-txt').textContent = 'Confirming…';
+  btn.disabled = true;
+  try {
+    var r = await fetch(API+'/api/bookings', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({
+        serviceId: sel.service.id, date: sel.date, time: sel.time,
+        customerName: name, phone: phone,
+        email: document.getElementById('inp-email').value.trim(),
+        notes: document.getElementById('inp-notes').value.trim()
+      })
+    });
+    var data = await r.json();
+    if(data.success) showDone(data.booking);
+    else { document.getElementById('conf-txt').textContent = data.error||'Try again'; btn.disabled=false; }
+  } catch(e) {
+    document.getElementById('conf-txt').textContent = 'Connection error';
+    btn.disabled = false;
+  }
+}
+
+function showDone(b) {
+  var months=['January','February','March','April','May','June','July','August','September','October','November','December'];
+  var parts=b.date.split('-');
+  var longDate = months[parseInt(parts[1])-1]+' '+parseInt(parts[2])+', '+parts[0];
+  document.getElementById('done-detail').innerHTML =
+    '<div class="d-row"><span class="d-lbl">Booking ID</span><span class="d-val" style="font-size:11px;font-family:monospace">'+b.id+'</span></div>' +
+    '<div class="d-row"><span class="d-lbl">Service</span><span class="d-val">'+b.serviceName+'</span></div>' +
+    '<div class="d-row"><span class="d-lbl">Date</span><span class="d-val">'+longDate+'</span></div>' +
+    '<div class="d-row"><span class="d-lbl">Time</span><span class="d-val">'+fmt12(b.time)+'</span></div>' +
+    '<div class="d-row"><span class="d-lbl">Total</span><span class="d-val" style="color:var(--green)">$'+b.price+'</span></div>';
+  var panels = document.querySelectorAll('.panel');
+  for(var i=0; i<panels.length; i++) panels[i].classList.remove('active');
+  document.getElementById('panel-done').classList.add('active');
+  for(var i=1; i<=3; i++) {
+    var el = document.getElementById('snav-'+i);
+    el.classList.remove('active'); el.classList.add('done');
+  }
+  document.getElementById('sum-empty').style.display='none';
+  document.getElementById('sum-lines').style.display='block';
+  document.getElementById('sum-lines').innerHTML='<div style="text-align:center;padding:12px 0"><div style="font-size:22px;margin-bottom:6px;color:rgba(255,255,255,0.8)">✓</div><div style="font-size:12px;color:rgba(255,255,255,0.4)">Booking confirmed</div></div>';
+}
+
+function reset() {
+  sel = {service:null,date:null,time:null};
+  ['inp-name','inp-phone','inp-email','inp-notes'].forEach(function(id){ document.getElementById(id).value=''; });
+  document.getElementById('conf-txt').textContent='Confirm Booking';
+  document.getElementById('btn-confirm').disabled=false;
+  goStep(1); updateSum(); loadServices();
+}
+
+loadServices();
+</script>
+</body>
+</html>
