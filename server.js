@@ -91,7 +91,14 @@ app.get("/api/availability", (req, res) => {
   if (!date) return res.status(400).json({ error: "date required" });
 
   const d = new Date(date);
-  if (d.getDay() === 0) return res.json({ date, slots: [] });
+  const dayOfWeek = d.getDay(); // 0=Sun, 1=Mon, 5=Fri, 6=Sat
+
+  // Determine start hour based on day
+  let startH;
+  if (dayOfWeek === 5) startH = 15;        // Friday: 3 PM
+  else if (dayOfWeek === 0 || dayOfWeek === 6) startH = 11; // Sat/Sun: 11 AM
+  else startH = 17;                          // Mon–Thu: 5 PM
+  const endH = 23; // all days end at 11 PM
 
   const now = new Date();
   const oneHourFromNow = new Date(now.getTime() + 60 * 60 * 1000);
@@ -103,9 +110,9 @@ app.get("/api/availability", (req, res) => {
     .value();
 
   const slots = [];
-  for (let h = 9; h <= 17; h++) {
+  for (let h = startH; h <= endH; h++) {
     for (let m of [0, 30]) {
-      if (h === 17 && m === 30) continue;
+      if (h === endH && m === 30) continue;
       const timeStr = String(h).padStart(2, '0') + ':' + String(m).padStart(2, '0');
       if (date === todayStr) {
         const slotTime = new Date(date + 'T' + timeStr + ':00');
