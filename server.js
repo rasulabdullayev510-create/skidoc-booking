@@ -108,7 +108,11 @@ app.get("/api/availability", (req, res) => {
 });
 
 app.post("/api/bookings", async (req, res) => {
-  const { serviceId, serviceName, servicePrice, date, time, customerName, phone, email, notes } = req.body;
+  const { serviceId, serviceName, servicePrice, date, time, customerName, email, notes } = req.body;
+  let phone = (req.body.phone || "").toString().replace(/[^0-9+]/g, "");
+  if (phone.length === 10) phone = "+1" + phone;
+  else if (phone.length === 11 && phone[0] === "1") phone = "+" + phone;
+  else if (phone.length > 0 && !phone.startsWith("+")) phone = "+" + phone;
   if (!serviceId || !date || !time || !customerName || !phone)
     return res.status(400).json({ error: "Missing required fields" });
 
