@@ -198,14 +198,14 @@ app.get("/dashboard", (req, res) => res.sendFile(path.join(__dirname, "public", 
 app.get("/review", (req, res) => res.sendFile(path.join(__dirname, "public", "review.html")));
 app.get("*", (req, res) => res.sendFile(path.join(__dirname, "public", "index.html")));
 
-// Review SMS fires 24h after appointment time
-cron.schedule("*/5 * * * *", async () => {
+// Review SMS fires 2 minutes after appointment time
+cron.schedule("* * * * *", async () => {
   const now = new Date();
   const pending = db.get("bookings").filter(b => {
     if (b.status !== "confirmed" || b.reviewSentAt) return false;
     const appointmentTime = new Date(`${b.date}T${b.time}:00`);
-    const hoursAfter = (now - appointmentTime) / (1000 * 60 * 60);
-    return hoursAfter >= 24 && hoursAfter < 25;
+    const minutesAfter = (now - appointmentTime) / (1000 * 60);
+    return minutesAfter >= 2 && minutesAfter < 3;
   }).value();
   for (const booking of pending) {
     try {
