@@ -11,6 +11,7 @@ require("dotenv").config();
 
 const app = express();
 app.use(cors());
+app.use(express.urlencoded({ extended: false }));
 app.use(express.json());
 app.use(express.static(path.join(__dirname, "public")));
 
@@ -29,6 +30,7 @@ const {
 const twilioClient = TWILIO_ACCOUNT_SID ? twilio(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN) : null;
 
 function generateToken() { return crypto.randomBytes(16).toString("hex"); }
+function generateShortId() { return crypto.randomBytes(3).toString("hex").toUpperCase(); }
 function getSurveyUrl(token) { return `${BASE_URL}/review?token=${token}`; }
 
 function formatTime(t) {
@@ -37,21 +39,33 @@ function formatTime(t) {
   return `${hr > 12 ? hr - 12 : hr || 12}:${m} ${hr >= 12 ? 'PM' : 'AM'}`;
 }
 
-async function sendBookingConfirmation(booking) {
+// SMS to owner — approve or deny request
+async function sendOwnerRequest(booking) {
+  if (!twilioClient || !OWNER_PHONE) { console.log(`[SMS SKIPPED] Owner request`); return; }
+  await twilioClient.messages.create({
+    body: `New booking request!\n${booking.customerName} wants ${booking.serviceName}\n${booking.date} at ${formatTime(booking.time)}\nPhone: ${booking.phone}\n\nReply:\nCONFIRM-${booking.shortId} to accept\nDENY-${booking.shortId} to decline`,
+    from: TWILIO_PHONE_NUMBER,
+    to: OWNER_PHONE,
+  });
+}
+
+// SMS to customer — booking confirmed
+async function sendCustomerConfirmation(booking) {
   if (!twilioClient) { console.log(`[SMS SKIPPED] Confirmation for ${booking.customerName}`); return; }
   await twilioClient.messages.create({
-    body: `Hi ${booking.customerName}! Your booking is confirmed at ${BUSINESS_NAME}. Service: ${booking.serviceName} on ${booking.date} at ${formatTime(booking.time)}. See you then!`,
+    body: `Hi ${booking.customerName}! Your booking is confirmed at ${BUSINESS_NAME}. ${booking.serviceName} on ${booking.date} at ${formatTime(booking.time)}. See you then!`,
     from: TWILIO_PHONE_NUMBER,
     to: booking.phone,
   });
 }
 
-async function sendOwnerNotification(booking) {
-  if (!twilioClient || !OWNER_PHONE) { console.log(`[SMS SKIPPED] Owner notification`); return; }
+// SMS to customer — booking denied, rebook link
+async function sendCustomerDenied(booking) {
+  if (!twilioClient) { console.log(`[SMS SKIPPED] Denial for ${booking.customerName}`); return; }
   await twilioClient.messages.create({
-    body: `New booking! ${booking.customerName} booked ${booking.serviceName} on ${booking.date} at ${formatTime(booking.time)}. Phone: ${booking.phone}.`,
+    body: `Hi ${booking.customerName}, unfortunately ${booking.date} at ${formatTime(booking.time)} is no longer available at ${BUSINESS_NAME}. Please choose another time: ${BASE_URL}`,
     from: TWILIO_PHONE_NUMBER,
-    to: OWNER_PHONE,
+    to: booking.phone,
   });
 }
 
@@ -84,7 +98,7 @@ app.get("/api/availability", (req, res) => {
   const todayStr = now.toISOString().split('T')[0];
 
   const booked = db.get("bookings")
-    .filter(b => b.date === date && b.status !== "cancelled")
+    .filter(b => b.date === date && b.status !== "cancelled" && b.status !== "denied")
     .map(b => b.time)
     .value();
 
@@ -119,35 +133,69 @@ app.post("/api/bookings", async (req, res) => {
   const service = { id: serviceId, name: serviceName || serviceId, price: Number(servicePrice) || 0 };
 
   const taken = db.get("bookings")
-    .find(b => b.date === date && b.time === time && b.status !== "cancelled")
+    .find(b => b.date === date && b.time === time && b.status !== "cancelled" && b.status !== "denied")
     .value();
   if (taken) return res.status(409).json({ error: "Slot already booked" });
 
   const booking = {
     id: `SKI-${Date.now()}`,
+    shortId: generateShortId(),
     serviceId, serviceName: service.name, servicePrice: service.price,
     date, time, customerName, phone,
     email: email || null, notes: notes || null,
-    status: "confirmed",
+    status: "pending",
     reviewToken: generateToken(),
     reviewSentAt: null,
     createdAt: new Date().toISOString(),
   };
 
   db.get("bookings").push(booking).write();
-  console.log(`✓ Booking: ${booking.id} — ${customerName} for ${service.name} on ${date} at ${time}`);
+  console.log(`✓ Booking request: ${booking.id} (${booking.shortId}) — ${customerName} for ${service.name} on ${date} at ${time}`);
 
-  try { await sendBookingConfirmation(booking); console.log(`✓ Confirmation SMS → ${customerName}`); }
-  catch (err) { console.error(`✗ Customer confirmation failed:`, err.message); }
-
-  try { await sendOwnerNotification(booking); console.log(`✓ Owner notification → ${OWNER_PHONE}`); }
-  catch (err) { console.error(`✗ Owner notification failed:`, err.message); }
+  try { await sendOwnerRequest(booking); console.log(`✓ Owner request sent → ${OWNER_PHONE}`); }
+  catch (err) { console.error(`✗ Owner request failed:`, err.message); }
 
   res.json({
     success: true,
     bookingId: booking.id,
     booking: { id: booking.id, serviceName: booking.serviceName, date, time, price: booking.servicePrice, customerName },
   });
+});
+
+// Twilio webhook — owner replies CONFIRM-XXXXX or DENY-XXXXX
+app.post("/api/sms-webhook", async (req, res) => {
+  const from = req.body.From;
+  const body = (req.body.Body || "").trim().toUpperCase();
+
+  // Only accept replies from owner
+  const ownerNormalized = (OWNER_PHONE || "").replace(/[^0-9]/g, "");
+  const fromNormalized = (from || "").replace(/[^0-9]/g, "");
+  if (!ownerNormalized || !fromNormalized.endsWith(ownerNormalized.slice(-10))) {
+    return res.set("Content-Type", "text/xml").send("<Response></Response>");
+  }
+
+  const confirmMatch = body.match(/^CONFIRM-([A-Z0-9]+)/);
+  const denyMatch = body.match(/^DENY-([A-Z0-9]+)/);
+
+  if (confirmMatch) {
+    const shortId = confirmMatch[1];
+    const booking = db.get("bookings").find({ shortId, status: "pending" }).value();
+    if (booking) {
+      db.get("bookings").find({ shortId }).assign({ status: "confirmed" }).write();
+      try { await sendCustomerConfirmation(booking); console.log(`✓ Confirmed ${shortId} → ${booking.customerName}`); }
+      catch (err) { console.error(`✗ Confirmation SMS failed:`, err.message); }
+    }
+  } else if (denyMatch) {
+    const shortId = denyMatch[1];
+    const booking = db.get("bookings").find({ shortId, status: "pending" }).value();
+    if (booking) {
+      db.get("bookings").find({ shortId }).assign({ status: "denied" }).write();
+      try { await sendCustomerDenied(booking); console.log(`✓ Denied ${shortId} → ${booking.customerName}`); }
+      catch (err) { console.error(`✗ Denial SMS failed:`, err.message); }
+    }
+  }
+
+  res.set("Content-Type", "text/xml").send("<Response></Response>");
 });
 
 app.get("/api/bookings", (req, res) => {
