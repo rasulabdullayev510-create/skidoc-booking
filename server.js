@@ -73,7 +73,7 @@ async function sendCustomerDenied(booking) {
 async function sendCustomerOffer(booking, suggestedDate, suggestedTime) {
   if (!twilioClient) { console.log(`[SMS SKIPPED] Offer for ${booking.customerName}`); return; }
   await twilioClient.messages.create({
-    body: `Hi ${booking.customerName}, ${booking.date} at ${formatTime(booking.time)} isn't available at ${BUSINESS_NAME}. We'd like to offer you ${suggestedDate} at ${formatTime(suggestedTime)} for your ${booking.serviceName}.\n\nReply YES to confirm or NO to choose your own time.`,
+    body: `Hi ${booking.customerName}! Unfortunately the time you requested isn't available. Would ${suggestedDate} at ${formatTime(suggestedTime)} work for you instead?\n\nReply YES to confirm or NO to decline.`,
     from: TWILIO_PHONE_NUMBER,
     to: booking.phone,
   });
