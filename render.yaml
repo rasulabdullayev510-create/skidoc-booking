@@ -1,0 +1,25 @@
+services:
+  - type: web
+    name: skidoc-booking
+    runtime: node
+    buildCommand: npm install
+    startCommand: node server.js
+    envVars:
+      - key: PORT
+        value: 3001
+      - key: BUSINESS_NAME
+        value: Ski Doc Calgary
+      - key: ADMIN_PASSWORD
+        value: skidoc2024
+      - key: TWILIO_ACCOUNT_SID
+        sync: false
+      - key: TWILIO_AUTH_TOKEN
+        sync: false
+      - key: TWILIO_PHONE_NUMBER
+        sync: false
+      - key: OWNER_PHONE
+        sync: false
+      - key: GOOGLE_PLACE_ID
+        sync: false
+      - key: BASE_URL
+        sync: false
