@@ -349,9 +349,9 @@ cron.schedule("* * * * *", async () => {
   const now = new Date();
   const pending = db.get("bookings").filter(b => {
     if (b.status !== "confirmed" || b.reviewSentAt) return false;
-    const appointmentTime = new Date(`${b.date}T${b.time}:00`);
+    const appointmentTime = new Date(`${b.date}T${b.time}:00-06:00`);
     const minutesAfter = (now - appointmentTime) / (1000 * 60);
-    return minutesAfter >= 2 && minutesAfter < 3;
+    return minutesAfter >= 2;
   }).value();
   for (const booking of pending) {
     try {
