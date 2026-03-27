@@ -113,7 +113,6 @@ app.post("/api/bookings", async (req, res) => {
     return res.status(400).json({ error: "Missing required fields" });
 
   const service = { id: serviceId, name: serviceName || serviceId, price: Number(servicePrice) || 0 };
-  if (!service) return res.status(400).json({ error: "Invalid service" });
 
   const taken = db.get("bookings")
     .find(b => b.date === date && b.time === time && b.status !== "cancelled")
@@ -199,13 +198,14 @@ app.get("/dashboard", (req, res) => res.sendFile(path.join(__dirname, "public", 
 app.get("/review", (req, res) => res.sendFile(path.join(__dirname, "public", "review.html")));
 app.get("*", (req, res) => res.sendFile(path.join(__dirname, "public", "index.html")));
 
-// Review SMS fires 2 minutes after booking (change to 24hrs for production)
-cron.schedule("* * * * *", async () => {
+// Review SMS fires 24h after appointment time
+cron.schedule("*/5 * * * *", async () => {
   const now = new Date();
   const pending = db.get("bookings").filter(b => {
     if (b.status !== "confirmed" || b.reviewSentAt) return false;
-    const minutesAgo = (now - new Date(b.createdAt)) / (1000 * 60);
-    return minutesAgo >= 2 && minutesAgo < 3;
+    const appointmentTime = new Date(`${b.date}T${b.time}:00`);
+    const hoursAfter = (now - appointmentTime) / (1000 * 60 * 60);
+    return hoursAfter >= 24 && hoursAfter < 25;
   }).value();
   for (const booking of pending) {
     try {
