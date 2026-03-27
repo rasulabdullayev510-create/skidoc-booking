@@ -277,8 +277,14 @@ app.post("/api/sms-webhook", async (req, res) => {
         }
       } else if (body === "NO") {
         db.get("bookings").find({ id: offerBooking.id }).assign({ status: "denied" }).write();
-        try { await sendCustomerDenied(offerBooking); console.log(`✓ Offer declined by ${offerBooking.customerName}`); }
-        catch (err) { console.error(err.message); }
+        try {
+          await twilioClient.messages.create({
+            body: `No problem ${offerBooking.customerName}! Give us a call at 825-521-2075 and we'll find a time that works for you.`,
+            from: TWILIO_PHONE_NUMBER,
+            to: offerBooking.phone,
+          });
+          console.log(`✓ Call prompt sent to ${offerBooking.customerName}`);
+        } catch (err) { console.error(err.message); }
       }
     }
   }
