@@ -63,7 +63,7 @@ async function sendCustomerConfirmation(booking) {
 async function sendCustomerDenied(booking) {
   if (!twilioClient) { console.log(`[SMS SKIPPED] Denial for ${booking.customerName}`); return; }
   await twilioClient.messages.create({
-    body: `Hi ${booking.customerName}, unfortunately that time is no longer available at ${BUSINESS_NAME}. Please choose another time: ${BASE_URL}`,
+    body: `Hi ${booking.customerName}, unfortunately that time is no longer available at ${BUSINESS_NAME}. Please choose another time: https://skidocyyc.ca/book`,
     from: TWILIO_PHONE_NUMBER,
     to: booking.phone,
   });
@@ -260,7 +260,7 @@ app.post("/api/sms-webhook", async (req, res) => {
           db.get("bookings").find({ id: offerBooking.id }).assign({ status: "denied" }).write();
           try {
             await twilioClient.messages.create({
-              body: `Sorry ${offerBooking.customerName}, that time just got taken. Please choose a new time: ${BASE_URL}`,
+              body: `Sorry ${offerBooking.customerName}, that time just got taken. Please choose a new time: https://skidocyyc.ca/book`,
               from: TWILIO_PHONE_NUMBER,
               to: offerBooking.phone,
             });
