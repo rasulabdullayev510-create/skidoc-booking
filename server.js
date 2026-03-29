@@ -100,8 +100,8 @@ app.get("/api/availability", (req, res) => {
   const { date } = req.query;
   if (!date) return res.status(400).json({ error: "date required" });
 
-  const d = new Date(date);
-  const dayOfWeek = d.getDay(); // 0=Sun, 1=Mon, 5=Fri, 6=Sat
+  const [year, month, day] = date.split('-').map(Number);
+  const dayOfWeek = new Date(year, month - 1, day).getDay(); // local date, no timezone shift
 
   // Determine start hour based on day
   let startH;
