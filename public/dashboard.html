@@ -79,6 +79,7 @@ tr:hover td{background:var(--bg)}
     <a class="nav-item active" onclick="showPage('overview')">◈ Overview</a>
     <a class="nav-item" onclick="showPage('bookings')">◷ Bookings</a>
     <a class="nav-item" onclick="showPage('reviews')">★ Reviews</a>
+    <a class="nav-item" onclick="showPage('walkins')">＋ Walk-ins</a>
     <div class="sb-bottom">
       <a href="/" class="nav-item">→ Booking Page</a>
       <a class="nav-item" onclick="logout()">⏻ Log Out</a>
@@ -111,6 +112,7 @@ function showPage(p){
   if(p==='overview')renderOverview();
   else if(p==='bookings')renderBookings();
   else if(p==='reviews')renderReviews();
+  else if(p==='walkins')renderWalkins();
 }
 function renderOverview(){
   document.getElementById('main').innerHTML=`
@@ -192,6 +194,48 @@ function renderReviews(){
         ${[['1','Customer books'],['→',''],['2','Service done'],['→',''],['3','SMS sent +24h'],['→',''],['4★','4-5 stars → Google'],['→',''],['✕','1-3 stars → Private']].map(([l,t])=>t?`<div style="padding:10px 16px;background:var(--bg);border-radius:10px"><div style="font-family:'Instrument Serif',serif;font-size:20px;color:var(--ink)">${l}</div><div style="font-size:11px;color:var(--ink3);margin-top:2px">${t}</div></div>`:`<div style="color:var(--ink3)">${l}</div>`).join('')}
       </div>
     </div>`;
+}
+async function renderWalkins(){
+  document.getElementById('main').innerHTML=`
+    <div class="page-title">Walk-ins</div>
+    <p class="page-sub">Add customers who didn't book online — they get a review SMS automatically after 24h</p>
+    <div class="table-card" style="margin-bottom:20px">
+      <div style="font-size:13px;font-weight:600;color:var(--ink);margin-bottom:16px">Add Walk-in Customer</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr auto;gap:12px;align-items:end">
+        <div class="field"><label>Customer Name</label><input type="text" id="wk-name" placeholder="Alex Johnson"/></div>
+        <div class="field"><label>Phone Number</label><input type="tel" id="wk-phone" placeholder="+1 (403) 555-0123"/></div>
+        <div class="field"><label>Service</label><input type="text" id="wk-service" placeholder="e.g. Full Ski Tune-Up"/></div>
+        <button class="btn" style="height:44px;white-space:nowrap" onclick="addWalkin()">Add + Send Review SMS</button>
+      </div>
+      <div id="wk-msg" style="margin-top:12px;font-size:13px;display:none"></div>
+    </div>
+    <div class="table-card" id="wk-table">Loading...</div>`;
+  loadWalkins();
+}
+async function addWalkin(){
+  const name=document.getElementById('wk-name').value.trim();
+  const phone=document.getElementById('wk-phone').value.trim();
+  const service=document.getElementById('wk-service').value.trim();
+  if(!name||!phone){document.getElementById('wk-msg').style.display='block';document.getElementById('wk-msg').style.color='var(--red)';document.getElementById('wk-msg').textContent='Name and phone are required.';return;}
+  const r=await fetch(API+'/api/walkins',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({customerName:name,phone,serviceName:service})});
+  const d=await r.json();
+  const msg=document.getElementById('wk-msg');
+  msg.style.display='block';
+  if(d.success){msg.style.color='var(--green)';msg.textContent='✓ Added! Review SMS will fire in 24h.';document.getElementById('wk-name').value='';document.getElementById('wk-phone').value='';document.getElementById('wk-service').value='';loadWalkins();}
+  else{msg.style.color='var(--red)';msg.textContent=d.error||'Error.';}
+}
+async function loadWalkins(){
+  const r=await fetch(API+'/api/walkins?password='+encodeURIComponent(pwd));
+  const walkins=await r.json();
+  document.getElementById('wk-table').innerHTML=`<table>
+    <thead><tr><th>Customer</th><th>Service</th><th>Added</th><th>Review SMS</th></tr></thead>
+    <tbody>${walkins.length?walkins.map(w=>`<tr>
+      <td><div style="font-weight:600">${w.customerName}</div><div style="font-size:11px;color:var(--ink3)">${w.phone}</div></td>
+      <td>${w.serviceName}</td>
+      <td style="color:var(--ink3);font-size:12px">${new Date(w.createdAt).toLocaleDateString()}</td>
+      <td><span class="badge badge-${w.reviewSentAt?'confirmed':'pending'}">${w.reviewSentAt?'Sent':'Pending'}</span></td>
+    </tr>`).join(''):'<tr><td colspan="4" style="text-align:center;color:var(--ink3);padding:40px">No walk-ins yet</td></tr>'}</tbody>
+  </table>`;
 }
 function logout(){pwd='';document.getElementById('dash').style.display='none';document.getElementById('login-screen').style.display='flex';document.getElementById('pwd').value='';}
 </script>

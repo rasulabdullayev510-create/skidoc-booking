@@ -17,7 +17,7 @@ app.use(express.static(path.join(__dirname, "public")));
 
 const adapter = new FileSync("db.json");
 const db = low(adapter);
-db.defaults({ bookings: [], feedback: [] }).write();
+db.defaults({ bookings: [], feedback: [], walkins: [] }).write();
 
 const {
   TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_PHONE_NUMBER,
@@ -292,6 +292,30 @@ app.post("/api/sms-webhook", async (req, res) => {
   res.set("Content-Type", "text/xml").send("<Response></Response>");
 });
 
+// Walk-in customers (manual review follow-up)
+app.post("/api/walkins", async (req, res) => {
+  const { customerName, serviceName } = req.body;
+  let phone = (req.body.phone || "").toString().replace(/[^0-9+]/g, "");
+  if (phone.length === 10) phone = "+1" + phone;
+  else if (phone.length === 11 && phone[0] === "1") phone = "+" + phone;
+  else if (phone.length > 0 && !phone.startsWith("+")) phone = "+" + phone;
+  if (!customerName || !phone) return res.status(400).json({ error: "Name and phone required" });
+  const walkin = {
+    id: `WK-${Date.now()}`, customerName, phone,
+    serviceName: serviceName || "Service",
+    reviewToken: crypto.randomBytes(16).toString("hex"),
+    reviewSentAt: null, createdAt: new Date().toISOString(),
+  };
+  db.get("walkins").push(walkin).write();
+  console.log(`✓ Walk-in added: ${customerName}`);
+  res.json({ success: true, id: walkin.id });
+});
+
+app.get("/api/walkins", (req, res) => {
+  if (req.query.password !== ADMIN_PASSWORD) return res.status(401).json({ error: "Unauthorized" });
+  res.json(db.get("walkins").value().reverse());
+});
+
 app.get("/api/bookings", (req, res) => {
   if (req.query.password !== ADMIN_PASSWORD) return res.status(401).json({ error: "Unauthorized" });
   res.json(db.get("bookings").value().reverse());
@@ -301,10 +325,12 @@ app.post("/api/review", (req, res) => {
   const { token, rating, comment } = req.body;
   if (!token || !rating) return res.status(400).json({ error: "token and rating required" });
   const booking = db.get("bookings").find({ reviewToken: token }).value();
-  if (!booking) return res.status(404).json({ error: "Invalid token" });
+  const walkin  = !booking ? db.get("walkins").find({ reviewToken: token }).value() : null;
+  const record  = booking || walkin;
+  if (!record) return res.status(404).json({ error: "Invalid token" });
   db.get("feedback").push({
-    id: Date.now(), bookingId: booking.id,
-    customerName: booking.customerName, serviceName: booking.serviceName,
+    id: Date.now(), sourceId: record.id,
+    customerName: record.customerName, serviceName: record.serviceName,
     rating: Number(rating), comment: comment || null,
     submittedAt: new Date().toISOString(),
   }).write();
@@ -313,9 +339,11 @@ app.post("/api/review", (req, res) => {
 
 app.get("/api/review/:token", (req, res) => {
   const booking = db.get("bookings").find({ reviewToken: req.params.token }).value();
-  if (!booking) return res.status(404).json({ error: "Not found" });
-  const alreadyReviewed = db.get("feedback").find({ bookingId: booking.id }).value();
-  res.json({ customerName: booking.customerName, serviceName: booking.serviceName, date: booking.date, alreadyReviewed: !!alreadyReviewed });
+  const walkin  = !booking ? db.get("walkins").find({ reviewToken: req.params.token }).value() : null;
+  const record  = booking || walkin;
+  if (!record) return res.status(404).json({ error: "Not found" });
+  const alreadyReviewed = db.get("feedback").find({ sourceId: record.id }).value();
+  res.json({ customerName: record.customerName, serviceName: record.serviceName, date: record.date || null, alreadyReviewed: !!alreadyReviewed });
 });
 
 app.get("/api/analytics", (req, res) => {
@@ -344,23 +372,40 @@ app.get("/dashboard", (req, res) => res.sendFile(path.join(__dirname, "public", 
 app.get("/review", (req, res) => res.sendFile(path.join(__dirname, "public", "review.html")));
 app.get("*", (req, res) => res.sendFile(path.join(__dirname, "public", "index.html")));
 
-// Review SMS fires 2 minutes after appointment time
+// Review SMS cron — bookings + walk-ins
 cron.schedule("* * * * *", async () => {
   const now = new Date();
-  const pending = db.get("bookings").filter(b => {
+
+  // Confirmed bookings — fires 24h after appointment
+  const pendingBookings = db.get("bookings").filter(b => {
     if (b.status !== "confirmed" || b.reviewSentAt) return false;
-    const appointmentTime = new Date(`${b.date}T${b.time}:00-06:00`);
-    const minutesAfter = (now - appointmentTime) / (1000 * 60);
-    return minutesAfter >= 2;
+    const apptTime = new Date(`${b.date}T${b.time}:00-06:00`);
+    return (now - apptTime) / (1000 * 60) >= 1440;
   }).value();
-  for (const booking of pending) {
+  for (const b of pendingBookings) {
     try {
-      await sendReviewSMS(booking);
-      db.get("bookings").find({ id: booking.id }).assign({ reviewSentAt: now.toISOString() }).write();
-      console.log(`✓ Review SMS → ${booking.customerName}`);
-    } catch (err) {
-      console.error(`✗ Review SMS failed:`, err.message);
-    }
+      await sendReviewSMS(b);
+      db.get("bookings").find({ id: b.id }).assign({ reviewSentAt: now.toISOString() }).write();
+      console.log(`✓ Review SMS → ${b.customerName} (booking)`);
+    } catch (err) { console.error(`✗ Review SMS failed:`, err.message); }
+  }
+
+  // Walk-ins — fires 24h after added
+  const pendingWalkins = db.get("walkins").filter(w => {
+    if (w.reviewSentAt) return false;
+    return (now - new Date(w.createdAt)) / (1000 * 60) >= 1440;
+  }).value();
+  for (const w of pendingWalkins) {
+    try {
+      if (twilioClient) {
+        await twilioClient.messages.create({
+          body: `Hi ${w.customerName}! How was your experience at ${BUSINESS_NAME}? Takes 20 seconds: ${BASE_URL}/review?token=${w.reviewToken}`,
+          from: TWILIO_PHONE_NUMBER, to: w.phone,
+        });
+      }
+      db.get("walkins").find({ id: w.id }).assign({ reviewSentAt: now.toISOString() }).write();
+      console.log(`✓ Review SMS → ${w.customerName} (walk-in)`);
+    } catch (err) { console.error(`✗ Review SMS failed:`, err.message); }
   }
 });
 
