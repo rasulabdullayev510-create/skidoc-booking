@@ -374,6 +374,7 @@ app.get("*", (req, res) => res.sendFile(path.join(__dirname, "public", "index.ht
 
 // Review SMS cron — bookings + walk-ins
 cron.schedule("* * * * *", async () => {
+  if (process.env.REVIEWS_PAUSED === "true") { console.log("[PAUSED] Review SMS skipped"); return; }
   const now = new Date();
 
   // Confirmed bookings — fires 24h after appointment
