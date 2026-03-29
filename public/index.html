@@ -257,10 +257,10 @@ function renderCal() {
     var dt=new Date(y,m,d);
     var mo=String(m+1).padStart(2,'0'), dd=String(d).padStart(2,'0');
     var ds=y+'-'+mo+'-'+dd;
-    var past=dt<today, sun=dt.getDay()===0, picked=ds===sel.date, tdy=dt.getTime()===today.getTime();
+    var past=dt<today, picked=ds===sel.date, tdy=dt.getTime()===today.getTime();
     var cls='cal-d';
-    if(past||sun) cls+=' dis'; else if(picked) cls+=' picked'; else if(tdy) cls+=' today';
-    var click = (!past&&!sun) ? ' onclick="pickDate(\''+ds+'\')"' : '';
+    if(past) cls+=' dis'; else if(picked) cls+=' picked'; else if(tdy) cls+=' today';
+    var click = !past ? ' onclick="pickDate(\''+ds+'\')"' : '';
     h+='<div class="'+cls+'"'+click+'>'+d+'</div>';
   }
   document.getElementById('cal-grid').innerHTML = h;
