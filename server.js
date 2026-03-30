@@ -57,6 +57,13 @@ async function sendCustomerConfirmation(booking) {
     from: TWILIO_PHONE_NUMBER,
     to: booking.phone,
   });
+  if (OWNER_PHONE) {
+    await twilioClient.messages.create({
+      body: `✓ Confirmed: ${booking.customerName} — ${booking.serviceName} on ${booking.date} at ${formatTime(booking.time)}`,
+      from: TWILIO_PHONE_NUMBER,
+      to: OWNER_PHONE,
+    });
+  }
 }
 
 // SMS to customer — booking denied, rebook link
