@@ -427,6 +427,21 @@ app.get("/api/review/:token", (req, res) => {
   res.json({ customerName: record.customerName, serviceName: record.serviceName, date: record.date || null, alreadyReviewed: !!alreadyReviewed });
 });
 
+app.get("/api/feedback", (req, res) => {
+  if (req.query.password !== ADMIN_PASSWORD) return res.status(401).json({ error: "Unauthorized" });
+  res.json(db.get("feedback").value().reverse());
+});
+
+// Danger zone — wipes all bookings, walk-ins, and feedback. Irreversible.
+app.post("/api/wipe-data", (req, res) => {
+  if (req.query.password !== ADMIN_PASSWORD) return res.status(401).json({ error: "Unauthorized" });
+  db.set("bookings", []).write();
+  db.set("walkins", []).write();
+  db.set("feedback", []).write();
+  console.log(`⚠ All data wiped by admin`);
+  res.json({ success: true });
+});
+
 app.get("/api/analytics", (req, res) => {
   if (req.query.password !== ADMIN_PASSWORD) return res.status(401).json({ error: "Unauthorized" });
   const bookings = db.get("bookings").value();
