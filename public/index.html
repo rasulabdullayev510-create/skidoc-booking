@@ -372,7 +372,7 @@ function renderLocations() {
       </div>
       <div class="loc-radio"></div>
     </div>
-    <div class="mobile-addr-wrap" id="mobile-addr-wrap" style="display:none">
+    <div class="mobile-addr-wrap" id="mobile-addr-wrap" style="display:none" onclick="event.stopPropagation()">
       <div class="field"><label>Your Address *</label><input type="text" id="inp-address" placeholder="123 Example St SW, Calgary, AB" oninput="state.address=this.value.trim();validateLocationStep();"/></div>
     </div>
   </div>`;
