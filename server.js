@@ -63,7 +63,7 @@ async function sendOwnerRequest(booking) {
   if (!twilioClient || !OWNER_PHONE) { console.log(`[SMS SKIPPED] Owner request`); return; }
   const where = locationLabel(booking.location, booking.address);
   await twilioClient.messages.create({
-    body: `New booking request!\n${booking.customerName} wants ${booking.serviceName}\n${booking.equipment ? `Equipment: ${booking.equipment}\n` : ''}Where: ${where}\n${booking.date} at ${formatTime(booking.time)}\nPhone: ${booking.phone}\n\nReply YES to confirm or NO to decline.`,
+    body: `New booking request!\n${booking.customerName} wants ${booking.serviceName}\nWhere: ${where}\n${booking.date} at ${formatTime(booking.time)}\nPhone: ${booking.phone}\n\nReply YES to confirm or NO to decline.`,
     from: TWILIO_PHONE_NUMBER,
     to: OWNER_PHONE,
   });
@@ -193,14 +193,12 @@ app.get("/api/availability", (req, res) => {
 });
 
 app.post("/api/bookings", async (req, res) => {
-  const { equipment, location, address, items, date, time, customerName, email, notes } = req.body;
+  const { location, address, items, date, time, customerName, email, notes } = req.body;
   let phone = (req.body.phone || "").toString().replace(/[^0-9+]/g, "");
   if (phone.length === 10) phone = "+1" + phone;
   else if (phone.length === 11 && phone[0] === "1") phone = "+" + phone;
   else if (phone.length > 0 && !phone.startsWith("+")) phone = "+" + phone;
 
-  if (!equipment || !["ski", "snowboard"].includes(equipment))
-    return res.status(400).json({ error: "Select ski or snowboard" });
   if (!location || !isValidLocation(location))
     return res.status(400).json({ error: "Select a valid location" });
   const isMobile = location === "mobile";
@@ -230,7 +228,6 @@ app.post("/api/bookings", async (req, res) => {
   const booking = {
     id: `SKI-${Date.now()}`,
     shortId: generateShortId(),
-    equipment,
     location,
     address: isMobile ? address.trim() : null,
     items: resolvedItems,

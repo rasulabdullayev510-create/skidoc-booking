@@ -54,14 +54,6 @@ body{background:var(--bg);color:var(--ink);font-family:'Plus Jakarta Sans',sans-
 .p-title{font-size:34px;font-weight:700;letter-spacing:-0.02em;line-height:1.1;color:var(--ink);margin-bottom:6px}
 .p-sub{font-size:14px;color:var(--ink3);line-height:1.7;margin-bottom:32px}
 
-/* Equipment cards */
-.equip-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
-.equip-card{border:1.5px solid var(--rule);border-radius:16px;padding:28px 20px;text-align:center;cursor:pointer;transition:all 0.15s;background:var(--white)}
-.equip-card:hover{border-color:var(--blue-mid);background:var(--blue-light)}
-.equip-card.sel{border-color:var(--blue);background:var(--blue-light);box-shadow:0 0 0 3px rgba(37,99,235,0.12)}
-.equip-icon{font-size:34px;margin-bottom:10px}
-.equip-name{font-size:16px;font-weight:700;color:var(--ink)}
-
 /* Location cards */
 .loc-grid{display:grid;gap:12px}
 .loc-card{border:1.5px solid var(--rule);border-radius:14px;padding:18px 20px;cursor:pointer;transition:all 0.15s;background:var(--white)}
@@ -94,6 +86,16 @@ body{background:var(--bg);color:var(--ink);font-family:'Plus Jakarta Sans',sans-
 .qty-btn{width:26px;height:26px;border-radius:50%;border:none;background:var(--bg);color:var(--ink2);font-size:15px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.12s}
 .qty-btn:hover{background:var(--blue-mid);color:var(--blue-dark)}
 .qty-num{font-size:13px;font-weight:700;min-width:14px;text-align:center}
+
+/* Compact individual-service cards — no description, tighter spacing,
+   so the long list of extras doesn't overwhelm next to the packages. */
+.svc-list-compact{gap:6px}
+.svc-card-compact{padding:10px 16px}
+.svc-card-compact .svc-name{font-size:13px}
+.svc-card-compact .svc-name-row{margin-bottom:0}
+.svc-card-compact .svc-price{font-size:16px}
+.svc-card-compact .qty-ctrl{padding:3px;gap:6px}
+.svc-card-compact .qty-btn{width:22px;height:22px;font-size:13px}
 
 .cal-wrap{display:grid;grid-template-columns:1fr 1fr;gap:32px;align-items:start}
 .cal-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
@@ -157,7 +159,6 @@ body{background:var(--bg);color:var(--ink);font-family:'Plus Jakarta Sans',sans-
   .cal-wrap{grid-template-columns:1fr;gap:24px}
   .form-grid{grid-template-columns:1fr}
   .form-full{grid-column:auto}
-  .equip-grid{grid-template-columns:1fr 1fr}
 }
 ::-webkit-scrollbar{width:4px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:var(--blue-mid);border-radius:4px}
 </style>
@@ -179,35 +180,43 @@ body{background:var(--bg);color:var(--ink);font-family:'Plus Jakarta Sans',sans-
     </div>
   </div>
   <div class="step-nav">
-    <div class="snav active" id="snav-1"><div class="snav-pip">1</div>Equipment</div>
-    <div class="snav" id="snav-2"><div class="snav-pip">2</div>Your details</div>
-    <div class="snav" id="snav-3"><div class="snav-pip">3</div>Location</div>
-    <div class="snav" id="snav-4"><div class="snav-pip">4</div>Services</div>
-    <div class="snav" id="snav-5"><div class="snav-pip">5</div>Date & time</div>
+    <div class="snav active" id="snav-1"><div class="snav-pip">1</div>Location</div>
+    <div class="snav" id="snav-2"><div class="snav-pip">2</div>Services</div>
+    <div class="snav" id="snav-3"><div class="snav-pip">3</div>Your details</div>
+    <div class="snav" id="snav-4"><div class="snav-pip">4</div>Date & time</div>
   </div>
 </div>
 <div class="right">
 
-  <!-- STEP 1: Equipment -->
+  <!-- STEP 1: Location -->
   <div class="panel active" id="panel-1">
-    <div class="p-eye">Step 1 of 5</div>
-    <div class="p-title">What are we tuning?</div>
-    <p class="p-sub">Pick your gear and we'll get you set up.</p>
-    <div class="equip-grid">
-      <div class="equip-card" id="equip-ski" onclick="pickEquip('ski')">
-        <div class="equip-icon">🎿</div>
-        <div class="equip-name">Ski</div>
-      </div>
-      <div class="equip-card" id="equip-snowboard" onclick="pickEquip('snowboard')">
-        <div class="equip-icon">🏂</div>
-        <div class="equip-name">Snowboard</div>
-      </div>
+    <div class="p-eye">Step 1 of 4</div>
+    <div class="p-title">Where should we tune?</div>
+    <p class="p-sub">Drop off at one of our shops, or have us come to you.</p>
+    <div class="loc-grid" id="loc-grid"></div>
+    <div class="btn-row">
+      <button class="btn-prime" id="btn-1" onclick="continueFromLocation()" disabled>Continue →</button>
     </div>
   </div>
 
-  <!-- STEP 2: Your details -->
+  <!-- STEP 2: Services -->
   <div class="panel" id="panel-2">
-    <div class="p-eye">Step 2 of 5</div>
+    <div class="p-eye">Step 2 of 4</div>
+    <div class="p-title">Choose your services.</div>
+    <p class="p-sub" id="svc-p-sub">Add as many as you need — quantities and multiple services are welcome.</p>
+    <div class="svc-list" id="svc-list">
+      <div class="spin-row"><div class="spin-d"></div><div class="spin-d"></div><div class="spin-d"></div></div>
+    </div>
+    <div class="field form-full" style="margin-top:24px"><label>Notes</label><textarea id="inp-notes" placeholder="Edge angle preference, damage to fix, anything else..."></textarea></div>
+    <div class="btn-row">
+      <button class="btn-back" onclick="goStep(1)">← Back</button>
+      <button class="btn-prime" id="btn-2" onclick="goStep(3)" disabled>Continue →</button>
+    </div>
+  </div>
+
+  <!-- STEP 3: Your details -->
+  <div class="panel" id="panel-3">
+    <div class="p-eye">Step 3 of 4</div>
     <div class="p-title">Your details.</div>
     <p class="p-sub">Just enough for us to confirm your booking.</p>
     <div class="form-grid">
@@ -216,41 +225,14 @@ body{background:var(--bg);color:var(--ink);font-family:'Plus Jakarta Sans',sans-
       <div class="field form-full"><label>Email Address</label><input type="email" id="inp-email" placeholder="alex@email.com (optional)" autocomplete="email"/></div>
     </div>
     <div class="btn-row">
-      <button class="btn-back" onclick="goStep(1)">← Back</button>
-      <button class="btn-prime" id="btn-2" onclick="continueFromDetails()">Continue →</button>
-    </div>
-  </div>
-
-  <!-- STEP 3: Location -->
-  <div class="panel" id="panel-3">
-    <div class="p-eye">Step 3 of 5</div>
-    <div class="p-title">Where should we tune?</div>
-    <p class="p-sub">Drop off at one of our shops, or have us come to you.</p>
-    <div class="loc-grid" id="loc-grid"></div>
-    <div class="btn-row">
       <button class="btn-back" onclick="goStep(2)">← Back</button>
-      <button class="btn-prime" id="btn-3" onclick="continueFromLocation()" disabled>Continue →</button>
+      <button class="btn-prime" id="btn-3" onclick="continueFromDetails()">Continue →</button>
     </div>
   </div>
 
-  <!-- STEP 4: Services -->
+  <!-- STEP 4: Date & time -->
   <div class="panel" id="panel-4">
-    <div class="p-eye">Step 4 of 5</div>
-    <div class="p-title">Choose your services.</div>
-    <p class="p-sub" id="svc-p-sub">Add as many as you need — quantities and multiple services are welcome.</p>
-    <div class="svc-list" id="svc-list">
-      <div class="spin-row"><div class="spin-d"></div><div class="spin-d"></div><div class="spin-d"></div></div>
-    </div>
-    <div class="field form-full" style="margin-top:24px"><label>Notes</label><textarea id="inp-notes" placeholder="Edge angle preference, damage to fix, anything else..."></textarea></div>
-    <div class="btn-row">
-      <button class="btn-back" onclick="goStep(3)">← Back</button>
-      <button class="btn-prime" id="btn-4" onclick="goStep(5)" disabled>Continue →</button>
-    </div>
-  </div>
-
-  <!-- STEP 5: Date & time -->
-  <div class="panel" id="panel-5">
-    <div class="p-eye">Step 5 of 5</div>
+    <div class="p-eye">Step 4 of 4</div>
     <div class="p-title">Pick a date & time.</div>
     <p class="p-sub" id="dt-p-sub">Bookings must be made at least 1 hour in advance.</p>
     <div class="cal-wrap">
@@ -268,7 +250,7 @@ body{background:var(--bg);color:var(--ink);font-family:'Plus Jakarta Sans',sans-
       </div>
     </div>
     <div class="btn-row">
-      <button class="btn-back" onclick="goStep(4)">← Back</button>
+      <button class="btn-back" onclick="goStep(3)">← Back</button>
       <button class="btn-prime" id="btn-confirm" onclick="confirmBooking()" disabled><span id="conf-txt">Confirm Booking</span></button>
     </div>
   </div>
@@ -299,7 +281,6 @@ let services = [], mobileSurcharge = 10, locations = [];
 let calMo = new Date(); calMo.setDate(1);
 
 const state = {
-  equipment: null,
   name: '', phone: '', email: '',
   location: null, address: '',
   cart: {}, // serviceId -> qty
@@ -325,26 +306,6 @@ async function loadLocations() {
   } catch (e) {
     document.getElementById('loc-grid').innerHTML = '<p style="color:var(--ink3)">Could not load locations — please refresh.</p>';
   }
-}
-
-function pickEquip(v) {
-  state.equipment = v;
-  document.getElementById('equip-ski').classList.toggle('sel', v === 'ski');
-  document.getElementById('equip-snowboard').classList.toggle('sel', v === 'snowboard');
-  updateSum();
-  setTimeout(() => goStep(2), 220);
-}
-
-function continueFromDetails() {
-  const name = document.getElementById('inp-name').value.trim();
-  const phone = document.getElementById('inp-phone').value.trim();
-  document.getElementById('inp-name').classList.toggle('err', !name);
-  document.getElementById('inp-phone').classList.toggle('err', !phone);
-  if (!name || !phone) return;
-  state.name = name; state.phone = phone;
-  state.email = document.getElementById('inp-email').value.trim();
-  updateSum();
-  goStep(3);
 }
 
 function renderLocations() {
@@ -392,11 +353,11 @@ function validateLocationStep() {
   const ok = state.location === 'location-a' || state.location === 'location-b'
     ? true
     : (state.location === 'mobile' ? !!state.address : false);
-  document.getElementById('btn-3').disabled = !ok;
+  document.getElementById('btn-1').disabled = !ok;
 }
 
 function continueFromLocation() {
-  goStep(4);
+  goStep(2);
 }
 
 function openDirections(address) {
@@ -425,6 +386,28 @@ function priceFor(svc) {
   return svc.price + (state.location === 'mobile' ? mobileSurcharge : 0);
 }
 
+function svcCard(s, compact) {
+  const qty = state.cart[s.id] || 0;
+  const price = priceFor(s);
+  const badge = s.id === 'seasonal-tune' ? '<span class="svc-badge">Most Popular</span>' : '';
+  const fromTxt = s.fromPrice ? '<span class="from">from</span>' : '';
+  const desc = compact ? '' : `<div class="svc-desc">${s.description}</div>`;
+  return `<div class="svc-card${compact ? ' svc-card-compact' : ''}${qty > 0 ? ' has-qty' : ''}">
+    <div>
+      <div class="svc-name-row"><span class="svc-name">${s.name}</span>${badge}</div>
+      ${desc}
+    </div>
+    <div class="svc-right">
+      <div class="svc-price">${fromTxt}$${price}</div>
+      <div class="qty-ctrl">
+        <button type="button" class="qty-btn" onclick="changeQty('${s.id}',-1)">−</button>
+        <span class="qty-num">${qty}</span>
+        <button type="button" class="qty-btn" onclick="changeQty('${s.id}',1)">+</button>
+      </div>
+    </div>
+  </div>`;
+}
+
 function renderSvcs() {
   const isMobile = state.location === 'mobile';
   document.getElementById('svc-p-sub').textContent = isMobile
@@ -434,29 +417,8 @@ function renderSvcs() {
   const packages = services.filter((s) => s.category === 'package');
   const singles = services.filter((s) => s.category !== 'package');
 
-  function svcCard(s) {
-    const qty = state.cart[s.id] || 0;
-    const price = priceFor(s);
-    const badge = s.id === 'seasonal-tune' ? '<span class="svc-badge">Most Popular</span>' : '';
-    const fromTxt = s.fromPrice ? '<span class="from">from</span>' : '';
-    return `<div class="svc-card${qty > 0 ? ' has-qty' : ''}">
-      <div>
-        <div class="svc-name-row"><span class="svc-name">${s.name}</span>${badge}</div>
-        <div class="svc-desc">${s.description}</div>
-      </div>
-      <div class="svc-right">
-        <div class="svc-price">${fromTxt}$${price}</div>
-        <div class="qty-ctrl">
-          <button type="button" class="qty-btn" onclick="changeQty('${s.id}',-1)">−</button>
-          <span class="qty-num">${qty}</span>
-          <button type="button" class="qty-btn" onclick="changeQty('${s.id}',1)">+</button>
-        </div>
-      </div>
-    </div>`;
-  }
-
-  let html = '<div class="svc-section-lbl">Packages</div><div class="svc-list">' + packages.map(svcCard).join('') + '</div>';
-  html += '<div class="svc-section-lbl">Individual Services</div><div class="svc-list">' + singles.map(svcCard).join('') + '</div>';
+  let html = '<div class="svc-section-lbl">Packages</div><div class="svc-list">' + packages.map((s) => svcCard(s, false)).join('') + '</div>';
+  html += '<div class="svc-section-lbl">Individual Services</div><div class="svc-list svc-list-compact">' + singles.map((s) => svcCard(s, true)).join('') + '</div>';
   document.getElementById('svc-list').innerHTML = html;
 }
 
@@ -466,7 +428,19 @@ function changeQty(id, delta) {
   else state.cart[id] = next;
   renderSvcs();
   updateSum();
-  document.getElementById('btn-4').disabled = Object.keys(state.cart).length === 0;
+  document.getElementById('btn-2').disabled = Object.keys(state.cart).length === 0;
+}
+
+function continueFromDetails() {
+  const name = document.getElementById('inp-name').value.trim();
+  const phone = document.getElementById('inp-phone').value.trim();
+  document.getElementById('inp-name').classList.toggle('err', !name);
+  document.getElementById('inp-phone').classList.toggle('err', !phone);
+  if (!name || !phone) return;
+  state.name = name; state.phone = phone;
+  state.email = document.getElementById('inp-email').value.trim();
+  updateSum();
+  goStep(4);
 }
 
 function renderCal() {
@@ -571,11 +545,10 @@ function locationDisplayName() {
 function updateSum() {
   const e = document.getElementById('sum-empty'), l = document.getElementById('sum-lines');
   const lines = cartLines();
-  if (!state.equipment && !state.location && !lines.length) { e.style.display = 'block'; l.style.display = 'none'; return; }
+  if (!state.location && !lines.length) { e.style.display = 'block'; l.style.display = 'none'; return; }
   e.style.display = 'none'; l.style.display = 'block';
 
   let html = '';
-  if (state.equipment) html += `<div class="sum-line"><span class="sum-lbl">Equipment</span><span class="sum-val">${state.equipment === 'ski' ? 'Ski' : 'Snowboard'}</span></div>`;
   if (state.location) html += `<div class="sum-line"><span class="sum-lbl">Location</span><span class="sum-val">${locationDisplayName()}</span></div>`;
   if (lines.length) {
     html += `<div class="sum-line"><span class="sum-lbl">Services</span></div><div class="sum-items">` +
@@ -591,13 +564,13 @@ function updateSum() {
 function goStep(n) {
   document.querySelectorAll('.panel').forEach((p) => p.classList.remove('active'));
   document.getElementById('panel-' + n).classList.add('active');
-  for (let i = 1; i <= 5; i++) {
+  for (let i = 1; i <= 4; i++) {
     const el = document.getElementById('snav-' + i);
     el.classList.remove('active', 'done');
     if (i < n) el.classList.add('done');
     if (i === n) el.classList.add('active');
   }
-  if (n === 5) renderCal();
+  if (n === 4) renderCal();
   // On mobile the left/right columns stack, so scrolling to the page top
   // sends the customer back up past the header instead of keeping them
   // where they were. Only reset scroll on desktop's side-by-side layout.
@@ -612,7 +585,6 @@ async function confirmBooking() {
     const r = await fetch(API + '/api/bookings', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        equipment: state.equipment,
         location: state.location,
         address: state.location === 'mobile' ? state.address : undefined,
         items: Object.entries(state.cart).map(([serviceId, qty]) => ({ serviceId, qty })),
@@ -643,7 +615,7 @@ function showDone(b) {
     `<div class="d-row"><span class="d-lbl">Total</span><span class="d-val" style="color:var(--green)">$${b.price}</span></div>`;
   document.querySelectorAll('.panel').forEach((p) => p.classList.remove('active'));
   document.getElementById('panel-done').classList.add('active');
-  for (let i = 1; i <= 5; i++) {
+  for (let i = 1; i <= 4; i++) {
     const el = document.getElementById('snav-' + i);
     el.classList.remove('active'); el.classList.add('done');
   }
@@ -654,14 +626,12 @@ function showDone(b) {
 }
 
 function reset() {
-  state.equipment = null; state.name = ''; state.phone = ''; state.email = '';
+  state.name = ''; state.phone = ''; state.email = '';
   state.location = null; state.address = ''; state.cart = {}; state.date = null; state.time = null;
   ['inp-name','inp-phone','inp-email','inp-notes'].forEach((id) => { const el = document.getElementById(id); if (el) el.value = ''; });
-  document.getElementById('equip-ski').classList.remove('sel');
-  document.getElementById('equip-snowboard').classList.remove('sel');
   document.getElementById('conf-txt').textContent = 'Confirm Booking';
-  document.getElementById('btn-4').disabled = true;
-  document.getElementById('btn-3').disabled = true;
+  document.getElementById('btn-2').disabled = true;
+  document.getElementById('btn-1').disabled = true;
   document.getElementById('btn-confirm').disabled = true;
   renderLocations();
   goStep(1);
