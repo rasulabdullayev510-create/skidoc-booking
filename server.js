@@ -17,7 +17,7 @@ app.use(express.static(path.join(__dirname, "public")));
 
 const adapter = new FileSync("db.json");
 const db = low(adapter);
-db.defaults({ bookings: [], feedback: [], walkins: [] }).write();
+db.defaults({ bookings: [], feedback: [], walkins: [], expenses: [], blocked: [], pageViews: [] }).write();
 
 const {
   TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_PHONE_NUMBER,
@@ -116,6 +116,16 @@ async function sendReviewSMS(booking) {
   });
 }
 
+// SMS to a past customer — invite them back
+async function sendWinbackSMS(phone, name) {
+  if (!twilioClient) { console.log(`[SMS SKIPPED] Winback for ${name}`); return; }
+  await twilioClient.messages.create({
+    body: `Hi ${name}! It's been a while — your gear is probably due for a tune. Book your next visit at https://skidocyyc.ca/book. See you soon!`,
+    from: TWILIO_PHONE_NUMBER,
+    to: phone,
+  });
+}
+
 const SERVICES = [
   { id: "performance-race-tune", name: "Performance Race Tune", price: 85, category: "package", description: "Full ceramic disc edge sharpening finished to an extra-fine edge, hand-ironed race wax, base and side edges set to the perfect angle." },
   { id: "seasonal-tune", name: "Seasonal Tune", price: 70, category: "package", description: "Ceramic disc edge sharpening, hand-ironed wax, stone base grind, and base repairs included." },
@@ -137,6 +147,7 @@ const LOCATIONS = [
 
 app.get("/api/services", (req, res) => res.json({ services: SERVICES, mobileSurcharge: MOBILE_SURCHARGE }));
 app.get("/api/locations", (req, res) => res.json(LOCATIONS));
+app.get("/api/info", (req, res) => res.json({ businessName: BUSINESS_NAME }));
 
 // Shared slot-window rules: weekdays are one window, Sat/Sun another;
 // mobile uses 2-hour increments, in-shop locations use 30-minute increments.
@@ -172,6 +183,11 @@ function computeSlots(date, location) {
     .map((b) => b.time)
     .value();
 
+  // Blocked dates/times apply owner-wide, across every location and mobile.
+  const blockedForDay = db.get("blocked").filter((b) => b.date === date).value();
+  const wholeDayBlocked = blockedForDay.some((b) => !b.time);
+  const blockedTimes = new Set(blockedForDay.filter((b) => b.time).map((b) => b.time));
+
   const slots = [];
   for (let mins = startMin; mins <= endMin; mins += stepMin) {
     const h = Math.floor(mins / 60), m = mins % 60;
@@ -180,7 +196,10 @@ function computeSlots(date, location) {
       const slotTime = new Date(`${date}T${timeStr}:00`);
       if (slotTime < oneHourFromNow) continue;
     }
-    slots.push({ time: timeStr, status: booked.includes(timeStr) ? 'booked' : 'available' });
+    const status = booked.includes(timeStr) ? 'booked'
+      : (wholeDayBlocked || blockedTimes.has(timeStr)) ? 'blocked'
+      : 'available';
+    slots.push({ time: timeStr, status });
   }
   return slots;
 }
@@ -223,7 +242,7 @@ app.post("/api/bookings", async (req, res) => {
   // The requested slot must actually be one we currently offer (window + not already past cutoff).
   const offeredSlot = computeSlots(date, location).find((s) => s.time === time);
   if (!offeredSlot) return res.status(400).json({ error: "That time is no longer available" });
-  if (offeredSlot.status === "booked") return res.status(409).json({ error: "Slot already booked" });
+  if (offeredSlot.status !== "available") return res.status(409).json({ error: "Slot already booked" });
 
   const booking = {
     id: `SKI-${Date.now()}`,
@@ -394,12 +413,12 @@ app.post("/api/walkins", async (req, res) => {
 
 app.get("/api/walkins", (req, res) => {
   if (req.query.password !== ADMIN_PASSWORD) return res.status(401).json({ error: "Unauthorized" });
-  res.json(db.get("walkins").value().reverse());
+  res.json(db.get("walkins").value().slice().reverse());
 });
 
 app.get("/api/bookings", (req, res) => {
   if (req.query.password !== ADMIN_PASSWORD) return res.status(401).json({ error: "Unauthorized" });
-  res.json(db.get("bookings").value().reverse());
+  res.json(db.get("bookings").value().slice().reverse());
 });
 
 app.post("/api/review", (req, res) => {
@@ -429,7 +448,7 @@ app.get("/api/review/:token", (req, res) => {
 
 app.get("/api/feedback", (req, res) => {
   if (req.query.password !== ADMIN_PASSWORD) return res.status(401).json({ error: "Unauthorized" });
-  res.json(db.get("feedback").value().reverse());
+  res.json(db.get("feedback").value().slice().reverse());
 });
 
 // Danger zone — wipes all bookings, walk-ins, and feedback. Irreversible.
@@ -438,8 +457,210 @@ app.post("/api/wipe-data", (req, res) => {
   db.set("bookings", []).write();
   db.set("walkins", []).write();
   db.set("feedback", []).write();
+  db.set("expenses", []).write();
+  db.set("blocked", []).write();
+  db.set("pageViews", []).write();
   console.log(`⚠ All data wiped by admin`);
   res.json({ success: true });
+});
+
+// ── Manual entry — log a phone/in-person booking directly as confirmed ──
+app.post("/api/manual-entry", async (req, res) => {
+  if (req.query.password !== ADMIN_PASSWORD) return res.status(401).json({ error: "Unauthorized" });
+  const { customerName, serviceName, servicePrice, date, notes, reviewDelayMinutes, serviceType, address } = req.body;
+  if (!customerName || !serviceName) return res.status(400).json({ error: "Name and service required" });
+  const isMobile = serviceType === "mobile";
+  if (isMobile && !(address || "").trim()) return res.status(400).json({ error: "Address is required for mobile" });
+
+  let phone = (req.body.phone || "").toString().replace(/[^0-9+]/g, "");
+  if (phone.length === 10) phone = "+1" + phone;
+  else if (phone.length === 11 && phone[0] === "1") phone = "+" + phone;
+  else if (phone.length > 0 && !phone.startsWith("+")) phone = "+" + phone;
+
+  const booking = {
+    id: `SKI-${Date.now()}`,
+    shortId: generateShortId(),
+    location: isMobile ? "mobile" : null,
+    locationName: isMobile ? "Mobile" : "In-Shop",
+    address: isMobile ? address.trim() : null,
+    items: [],
+    serviceName, servicePrice: Number(servicePrice) || 0,
+    date: date || new Date().toISOString().split('T')[0], time: "00:00",
+    customerName, phone: phone || null, email: null, notes: notes || null,
+    status: "confirmed", source: "manual",
+    reviewToken: generateToken(), reviewSentAt: null,
+    reviewDelayMinutes: phone ? (Number.isFinite(Number(reviewDelayMinutes)) ? Number(reviewDelayMinutes) : 1440) : -1,
+    createdAt: new Date().toISOString(),
+  };
+  db.get("bookings").push(booking).write();
+  console.log(`✓ Manual entry logged: ${booking.id} — ${customerName} for ${serviceName}`);
+
+  if (phone && booking.reviewDelayMinutes === 0) {
+    try {
+      await sendReviewSMS(booking);
+      db.get("bookings").find({ id: booking.id }).assign({ reviewSentAt: new Date().toISOString() }).write();
+    } catch (err) { console.error(`✗ Immediate review SMS failed:`, err.message); }
+  }
+  res.json({ success: true, bookingId: booking.id });
+});
+
+app.post("/api/bookings/:id/noshow", (req, res) => {
+  if (req.query.password !== ADMIN_PASSWORD) return res.status(401).json({ error: "Unauthorized" });
+  const booking = db.get("bookings").find({ id: req.params.id }).value();
+  if (!booking) return res.status(404).json({ error: "Not found" });
+  db.get("bookings").find({ id: req.params.id }).assign({ status: "noshow" }).write();
+  res.json({ success: true });
+});
+
+app.post("/api/bookings/:id/tip", (req, res) => {
+  if (req.query.password !== ADMIN_PASSWORD) return res.status(401).json({ error: "Unauthorized" });
+  const amount = Number(req.body.amount);
+  if (!amount || amount <= 0) return res.status(400).json({ error: "Invalid amount" });
+  const booking = db.get("bookings").find({ id: req.params.id }).value();
+  if (!booking) return res.status(404).json({ error: "Not found" });
+  db.get("bookings").find({ id: req.params.id }).assign({ tipAmount: amount }).write();
+  res.json({ success: true });
+});
+
+app.post("/api/winback", async (req, res) => {
+  if (req.query.password !== ADMIN_PASSWORD) return res.status(401).json({ error: "Unauthorized" });
+  const { phone, customerName } = req.body;
+  if (!phone) return res.status(400).json({ error: "Phone required" });
+  try { await sendWinbackSMS(phone, customerName || "there"); res.json({ success: true }); }
+  catch (err) { console.error(`✗ Winback SMS failed:`, err.message); res.status(500).json({ error: "Failed to send" }); }
+});
+
+app.post("/api/send-review", async (req, res) => {
+  if (req.query.password !== ADMIN_PASSWORD) return res.status(401).json({ error: "Unauthorized" });
+  const { phone, customerName } = req.body;
+  if (!phone) return res.status(400).json({ error: "Phone required" });
+  const norm = phone.replace(/[^0-9]/g, "").slice(-10);
+  const candidates = db.get("bookings").filter((b) => (b.phone || "").replace(/[^0-9]/g, "").endsWith(norm)).value();
+  const latest = candidates.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))[0];
+  if (!latest) return res.status(404).json({ error: "No matching customer record" });
+  try {
+    await sendReviewSMS(latest);
+    db.get("bookings").find({ id: latest.id }).assign({ reviewSentAt: new Date().toISOString() }).write();
+    res.json({ success: true });
+  } catch (err) { console.error(`✗ Manual review SMS failed:`, err.message); res.status(500).json({ error: "Failed to send" }); }
+});
+
+// ── Block times — owner-wide, applies across every location and mobile ──
+app.get("/api/blocked", (req, res) => {
+  if (req.query.password !== ADMIN_PASSWORD) return res.status(401).json({ error: "Unauthorized" });
+  res.json(db.get("blocked").value());
+});
+
+app.post("/api/blocked", (req, res) => {
+  if (req.query.password !== ADMIN_PASSWORD) return res.status(401).json({ error: "Unauthorized" });
+  const { date, time } = req.body;
+  if (!date) return res.status(400).json({ error: "date required" });
+  const exists = db.get("blocked").find((b) => b.date === date && (b.time || null) === (time || null)).value();
+  if (!exists) db.get("blocked").push({ date, time: time || null }).write();
+  res.json({ success: true });
+});
+
+app.delete("/api/blocked", (req, res) => {
+  if (req.query.password !== ADMIN_PASSWORD) return res.status(401).json({ error: "Unauthorized" });
+  const { date, time } = req.body;
+  db.set("blocked", db.get("blocked").value().filter((b) => !(b.date === date && (b.time || null) === (time || null)))).write();
+  res.json({ success: true });
+});
+
+app.post("/api/blocked/range", (req, res) => {
+  if (req.query.password !== ADMIN_PASSWORD) return res.status(401).json({ error: "Unauthorized" });
+  const { date, startTime, endTime } = req.body;
+  if (!date || !startTime || !endTime) return res.status(400).json({ error: "date, startTime, endTime required" });
+  const [sh, sm] = startTime.split(':').map(Number);
+  const [eh, em] = endTime.split(':').map(Number);
+  const startMin = sh * 60 + sm, endMin = eh * 60 + em;
+  if (startMin >= endMin) return res.status(400).json({ error: "startTime must be before endTime" });
+  for (let mins = startMin; mins < endMin; mins += 30) {
+    const h = Math.floor(mins / 60), m = mins % 60;
+    const t = String(h).padStart(2, '0') + ':' + String(m).padStart(2, '0');
+    const exists = db.get("blocked").find((b) => b.date === date && b.time === t).value();
+    if (!exists) db.get("blocked").push({ date, time: t }).write();
+  }
+  res.json({ success: true });
+});
+
+// ── Expenses ─────────────────────────────────────────────────
+app.get("/api/expenses", (req, res) => {
+  if (req.query.password !== ADMIN_PASSWORD) return res.status(401).json({ error: "Unauthorized" });
+  res.json(db.get("expenses").value().slice().reverse());
+});
+
+app.post("/api/expenses", (req, res) => {
+  if (req.query.password !== ADMIN_PASSWORD) return res.status(401).json({ error: "Unauthorized" });
+  const { description, category, amount, date } = req.body;
+  if (!description || !amount) return res.status(400).json({ error: "description and amount required" });
+  const expense = {
+    id: `EXP-${Date.now()}`, description, category: category || "Other",
+    amount: Number(amount), date: date || new Date().toISOString().split('T')[0],
+    createdAt: new Date().toISOString(),
+  };
+  db.get("expenses").push(expense).write();
+  res.json({ success: true, id: expense.id });
+});
+
+app.delete("/api/expenses/:id", (req, res) => {
+  if (req.query.password !== ADMIN_PASSWORD) return res.status(401).json({ error: "Unauthorized" });
+  db.set("expenses", db.get("expenses").value().filter((e) => e.id !== req.params.id)).write();
+  res.json({ success: true });
+});
+
+// ── Website page-view tracking (anonymous, no cookies/PII) ─────
+app.post("/api/track", (req, res) => {
+  const page = (req.body && req.body.page) || "unknown";
+  const now = getCalgaryNow();
+  const date = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+  db.get("pageViews").push({ page, date, ts: new Date().toISOString() }).write();
+  res.json({ success: true });
+});
+
+app.get("/api/stats", (req, res) => {
+  if (req.query.password !== ADMIN_PASSWORD) return res.status(401).json({ error: "Unauthorized" });
+  const bookings = db.get("bookings").value();
+  const feedback = db.get("feedback").value();
+  const walkins = db.get("walkins").value();
+  const expenses = db.get("expenses").value();
+  const pageViews = db.get("pageViews").value();
+  const confirmed = bookings.filter((b) => b.status === "confirmed");
+
+  const now = getCalgaryNow();
+  const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+
+  const earnedRevenue = confirmed.filter((b) => b.date <= todayStr).reduce((s, b) => s + b.servicePrice + (b.tipAmount || 0), 0);
+  const upcomingRevenue = confirmed.filter((b) => b.date > todayStr).reduce((s, b) => s + b.servicePrice, 0);
+  const totalExpenses = expenses.reduce((s, e) => s + (Number(e.amount) || 0), 0);
+  const netProfit = earnedRevenue - totalExpenses;
+
+  const totalFeedback = feedback.length;
+  const avgRating = totalFeedback ? (feedback.reduce((s, f) => s + f.rating, 0) / totalFeedback).toFixed(1) : null;
+  const reviewRate = confirmed.length ? Math.round((totalFeedback / confirmed.length) * 100) : 0;
+
+  const revenueByDay = {};
+  const viewsByDay = {};
+  for (let i = 29; i >= 0; i--) {
+    const d = new Date(now); d.setDate(d.getDate() - i);
+    const key = d.toISOString().split('T')[0];
+    revenueByDay[key] = 0; viewsByDay[key] = 0;
+  }
+  confirmed.forEach((b) => { if (revenueByDay[b.date] !== undefined) revenueByDay[b.date] += b.servicePrice; });
+  pageViews.forEach((v) => { if (viewsByDay[v.date] !== undefined) viewsByDay[v.date]++; });
+
+  const totalViews = pageViews.length;
+  const homeViews = pageViews.filter((v) => v.page === "home").length;
+  const convRate = totalViews ? ((bookings.length / totalViews) * 100).toFixed(1) : "0.0";
+
+  res.json({
+    totalBookings: confirmed.length,
+    earnedRevenue, upcomingRevenue, totalRevenue: earnedRevenue + upcomingRevenue,
+    totalExpenses, netProfit,
+    avgRating, reviewRate,
+    totalViews, homeViews, viewsByDay, convRate,
+    totalWalkins: walkins.length, revenueByDay,
+  });
 });
 
 app.get("/api/analytics", (req, res) => {
@@ -473,9 +694,15 @@ cron.schedule("* * * * *", async () => {
   if (process.env.REVIEWS_PAUSED === "true") { console.log("[PAUSED] Review SMS skipped"); return; }
   const now = new Date();
 
-  // Confirmed bookings — fires 24h after appointment
+  // Confirmed bookings — fires 24h after appointment. Manual entries carry
+  // their own reviewDelayMinutes (relative to when they were logged), since
+  // the appointment already happened by the time they're entered.
   const pendingBookings = db.get("bookings").filter(b => {
     if (b.status !== "confirmed" || b.reviewSentAt) return false;
+    if (typeof b.reviewDelayMinutes === "number") {
+      if (b.reviewDelayMinutes < 0) return false;
+      return (now - new Date(b.createdAt)) / (1000 * 60) >= b.reviewDelayMinutes;
+    }
     const apptTime = new Date(`${b.date}T${b.time}:00-06:00`);
     return (now - apptTime) / (1000 * 60) >= 1440;
   }).value();

@@ -22,7 +22,6 @@
 html{scroll-behavior:smooth}
 body{background:var(--bg);color:var(--text);font-family:'Outfit',sans-serif;min-height:100vh;-webkit-font-smoothing:antialiased}
 
-/* Login */
 .login{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;background:radial-gradient(ellipse 80% 60% at 50% 0%,rgba(59,130,246,0.08) 0%,transparent 70%)}
 .login-box{background:var(--bg2);border:1px solid var(--border2);border-radius:20px;padding:48px 40px;width:100%;max-width:380px}
 .login-logo{font-size:13px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--text3);margin-bottom:32px}
@@ -38,19 +37,19 @@ body{background:var(--bg);color:var(--text);font-family:'Outfit',sans-serif;min-
 .btn:disabled{opacity:0.4;cursor:default;transform:none}
 .err{font-size:13px;color:var(--red);margin-top:12px;display:none;text-align:center}
 
-/* App shell */
 .app{display:none;min-height:100vh}
-.sidebar{position:fixed;top:0;left:0;bottom:0;width:220px;background:var(--bg2);border-right:1px solid var(--border);display:flex;flex-direction:column;padding:28px 16px;z-index:10}
-.sb-brand{display:flex;align-items:center;gap:10px;padding:0 8px;margin-bottom:36px}
+.sidebar{position:fixed;top:0;left:0;bottom:0;width:230px;background:var(--bg2);border-right:1px solid var(--border);display:flex;flex-direction:column;padding:28px 16px;z-index:10;overflow-y:auto}
+.sb-brand{display:flex;align-items:center;gap:10px;padding:0 8px;margin-bottom:28px}
 .sb-brand-dot{width:8px;height:8px;border-radius:50%;background:var(--green)}
 .sb-brand-name{font-size:14px;font-weight:700;color:var(--text)}
 .sb-brand-sub{font-size:11px;color:var(--text3)}
+.sb-section{font-size:10px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:var(--text3);padding:0 10px;margin:18px 0 8px}
 .nav-item{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:10px;font-size:13px;font-weight:500;color:var(--text2);cursor:pointer;transition:all 0.15s;margin-bottom:2px;border:none;background:none;width:100%;text-align:left;font-family:'Outfit',sans-serif}
 .nav-item:hover{background:var(--bg3);color:var(--text)}
 .nav-item.active{background:var(--primary-glow);color:var(--primary);font-weight:600}
 .nav-item-icon{width:18px;text-align:center;font-size:14px}
 .sb-bottom{margin-top:auto}
-.main{margin-left:220px;padding:40px;min-height:100vh}
+.main{margin-left:230px;padding:40px;min-height:100vh}
 
 .page-hdr{margin-bottom:32px}
 .page-hdr h1{font-size:1.8rem;font-weight:800;letter-spacing:-0.02em;margin-bottom:4px}
@@ -62,6 +61,7 @@ body{background:var(--bg);color:var(--text);font-family:'Outfit',sans-serif;min-
 .stat-card.green::before{background:var(--green)}
 .stat-card.blue::before{background:var(--primary)}
 .stat-card.yellow::before{background:var(--yellow)}
+.stat-card.red::before{background:var(--red)}
 .stat-lbl{font-size:11px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--text3);margin-bottom:12px}
 .stat-num{font-size:2.4rem;font-weight:800;letter-spacing:-0.03em;line-height:1;margin-bottom:6px}
 .stat-num.green{color:var(--green)}
@@ -84,11 +84,8 @@ body{background:var(--bg);color:var(--text);font-family:'Outfit',sans-serif;min-
 .no-sched{font-size:13px;color:var(--text3);text-align:center;padding:32px 0}
 
 .table-wrap{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);overflow-x:auto;-webkit-overflow-scrolling:touch;margin-bottom:20px}
-.table-head{padding:18px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px}
+.table-head{padding:18px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
 .table-head-title{font-size:14px;font-weight:700}
-.tab-row{display:flex;gap:8px;flex-wrap:wrap}
-.tab-btn{padding:7px 16px;border-radius:8px;border:1.5px solid var(--border2);background:transparent;color:var(--text2);font-family:inherit;font-size:12px;font-weight:600;cursor:pointer;transition:all 0.15s}
-.tab-btn.active{border-color:var(--primary);background:var(--primary-glow);color:var(--primary)}
 table{width:100%;border-collapse:collapse;min-width:480px}
 th{text-align:left;font-size:10px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--text3);padding:12px 16px;border-bottom:1px solid var(--border)}
 td{padding:12px 16px;font-size:13px;border-bottom:1px solid rgba(255,255,255,0.04)}
@@ -99,6 +96,8 @@ tr:hover td{background:rgba(255,255,255,0.02)}
 .badge-pending{background:var(--yellow-bg);color:var(--yellow)}
 .badge-denied,.badge-cancelled{background:var(--red-bg);color:var(--red)}
 .badge-denied_awaiting_offer,.badge-offer_sent{background:var(--yellow-bg);color:var(--yellow)}
+.badge-sent{background:var(--green-bg);color:var(--green)}
+.badge-noshow{background:rgba(239,68,68,0.12);color:var(--red)}
 
 .form-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:28px;margin-bottom:20px}
 .form-card h3{font-size:15px;font-weight:700;margin-bottom:4px}
@@ -111,6 +110,16 @@ tr:hover td{background:rgba(255,255,255,0.02)}
 .form-msg.ok{color:var(--green)}
 .form-msg.fail{color:var(--red)}
 
+.conv-meter{margin-top:12px}
+.conv-bar-bg{height:8px;background:var(--bg3);border-radius:4px;overflow:hidden;margin:8px 0 4px}
+.conv-bar-fill{height:100%;border-radius:4px;background:linear-gradient(90deg,var(--primary),var(--green));transition:width 1s ease}
+.conv-labels{display:flex;justify-content:space-between;font-size:11px;color:var(--text3)}
+
+.traffic-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px}
+.traffic-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:20px;text-align:center}
+.traffic-num{font-size:1.8rem;font-weight:800;letter-spacing:-0.02em;margin-bottom:4px}
+.traffic-lbl{font-size:11px;color:var(--text3);font-weight:600;text-transform:uppercase;letter-spacing:0.08em}
+
 ::-webkit-scrollbar{width:4px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:var(--border2);border-radius:4px}
 
 .mob-header{display:none;align-items:center;gap:12px;height:56px;padding:0 16px;background:var(--bg2);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:20;flex-shrink:0;width:100%}
@@ -119,13 +128,15 @@ tr:hover td{background:rgba(255,255,255,0.02)}
 .mob-overlay.open{display:block}
 
 @media(max-width:900px){
+  .app{flex-direction:column}
   .mob-header{display:flex}
-  .sidebar{left:-260px;transition:left 0.25s ease;z-index:25;top:0}
+  .sidebar{left:-260px;transition:left 0.25s ease;z-index:25;display:flex!important;top:0}
   .sidebar.open{left:0;box-shadow:8px 0 32px rgba(0,0,0,0.35)}
   .main{margin-left:0;padding:24px}
   .stats-row{grid-template-columns:1fr 1fr}
   .charts-row{grid-template-columns:1fr}
   .form-row{grid-template-columns:1fr!important}
+  .traffic-grid{grid-template-columns:1fr 1fr}
 }
 @media(max-width:640px){
   .main{padding:14px}
@@ -137,9 +148,11 @@ tr:hover td{background:rgba(255,255,255,0.02)}
   .stat-num{font-size:1.5rem}
   .stat-lbl{font-size:10px;margin-bottom:8px}
   .stat-sub{font-size:11px}
+  .charts-row{gap:12px}
   .chart-card,.form-card{padding:16px}
   .card-title{font-size:13px}
-  .field input,.field select{font-size:16px}
+  .traffic-grid{grid-template-columns:1fr 1fr}
+  .field input,.field select,.field textarea{font-size:16px}
   .login-box{padding:24px 18px}
   .login-title{font-size:1.5rem}
   .login-sub{font-size:13px}
@@ -147,14 +160,23 @@ tr:hover td{background:rgba(255,255,255,0.02)}
   td,th{padding:10px;font-size:12px}
   .table-head{padding:14px 16px}
   .schedule-list{max-height:none}
+  #ex-form-row{grid-template-columns:1fr!important}
+  .form-card h3{font-size:14px}
+  .sched-item{gap:8px;padding:10px 12px}
+  .btn{padding:13px;font-size:14px}
 }
-.table-scroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
+@media(max-width:380px){
+  .stats-row{grid-template-columns:1fr!important}
+  .main{padding:10px}
+}
+
 .mob-card{background:var(--bg3);border:1px solid var(--border);border-radius:12px;padding:14px 16px;margin-bottom:10px}
 .mob-card-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px;gap:8px}
 .mob-card-date{font-size:12px;color:var(--primary);font-weight:700}
 .mob-card-name{font-weight:700;font-size:15px;margin-bottom:2px}
 .mob-card-sub{font-size:12px;color:var(--text3);margin-bottom:6px}
 .mob-card-meta{font-size:12px;color:var(--text2);line-height:1.7}
+.mob-card-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;padding-top:10px;border-top:1px solid var(--border)}
 .mob-empty{text-align:center;color:var(--text3);padding:30px;font-size:13px}
 .mob-cards-wrap{padding:14px 16px}
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:0.01ms!important;transition-duration:0.01ms!important}}
@@ -186,7 +208,7 @@ tr:hover td{background:rgba(255,255,255,0.02)}
   <div class="sidebar" id="sidebar">
     <div class="sb-brand">
       <div>
-        <div class="sb-brand-name">Ski Doc</div>
+        <div class="sb-brand-name" id="sb-name">Ski Doc</div>
         <div style="display:flex;align-items:center;gap:6px;margin-top:3px">
           <div class="sb-brand-dot"></div>
           <div class="sb-brand-sub">Live</div>
@@ -194,26 +216,23 @@ tr:hover td{background:rgba(255,255,255,0.02)}
       </div>
     </div>
 
-    <button class="nav-item active" onclick="showPage('overview',this)">
-      <span class="nav-item-icon">◈</span> Overview
-    </button>
-    <button class="nav-item" onclick="showPage('bookings',this)">
-      <span class="nav-item-icon">☰</span> Bookings
-    </button>
-    <button class="nav-item" onclick="showPage('walkins',this)">
-      <span class="nav-item-icon">＋</span> Walk-ins
-    </button>
-    <button class="nav-item" onclick="showPage('reviews',this)">
-      <span class="nav-item-icon">★</span> Reviews
-    </button>
+    <div class="sb-section">Overview</div>
+    <button class="nav-item active" onclick="showPage('overview',this)"><span class="nav-item-icon">◈</span> Overview</button>
+    <button class="nav-item" onclick="showPage('schedule',this)"><span class="nav-item-icon">◷</span> Schedule</button>
+    <button class="nav-item" onclick="showPage('traffic',this)"><span class="nav-item-icon">↗</span> Website Traffic</button>
+
+    <div class="sb-section">Customers</div>
+    <button class="nav-item" onclick="showPage('bookings',this)"><span class="nav-item-icon">☰</span> All Bookings</button>
+    <button class="nav-item" onclick="showPage('clients',this)"><span class="nav-item-icon">👤</span> Clients</button>
+    <button class="nav-item" onclick="showPage('manual',this)"><span class="nav-item-icon">＋</span> Manual Entry</button>
+    <button class="nav-item" onclick="showPage('walkins',this)"><span class="nav-item-icon">🚶</span> Walk-ins</button>
+    <button class="nav-item" onclick="showPage('availability',this)"><span class="nav-item-icon">🚫</span> Block Times</button>
+    <button class="nav-item" onclick="showPage('reviews',this)"><span class="nav-item-icon">★</span> Reviews</button>
+    <button class="nav-item" onclick="showPage('expenses',this)"><span class="nav-item-icon">💸</span> Expenses</button>
 
     <div class="sb-bottom">
-      <button class="nav-item" onclick="showPage('danger',this)">
-        <span class="nav-item-icon">⚠</span> Danger Zone
-      </button>
-      <button class="nav-item" onclick="logout()">
-        <span class="nav-item-icon">⏻</span> Log Out
-      </button>
+      <button class="nav-item" onclick="showPage('danger',this)"><span class="nav-item-icon">⚠</span> Danger Zone</button>
+      <button class="nav-item" onclick="logout()"><span class="nav-item-icon">⏻</span> Log Out</button>
     </div>
   </div>
 
@@ -222,9 +241,14 @@ tr:hover td{background:rgba(255,255,255,0.02)}
 
 <script>
 const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-const API = window.location.origin;
-let pwd = '', stats = null, bookings = [], walkins = [], feedback = [];
-let currentPeriod = 'today', currentBookingsFilter = 'all';
+// skidocyyc.ca/book is a proxy (not a redirect), so window.location.origin
+// stays "skidocyyc.ca" even though this page is served from Render.
+const API = /\bonrender\.com$/.test(location.hostname) || location.hostname === 'localhost'
+  ? window.location.origin
+  : 'https://skidoc-booking-eblt.onrender.com';
+
+let pwd = '', stats = null, bookings = [], walkins = [], feedback = [], expenses = [];
+let currentPage = 'overview', currentPeriod = 'today', currentBookingsFilter = 'all';
 
 async function login() {
   pwd = document.getElementById('pwd').value.trim();
@@ -232,17 +256,26 @@ async function login() {
   const btn = document.getElementById('login-btn');
   btn.textContent = 'Connecting...'; btn.disabled = true;
   try {
-    const [sr, br, wr, fr] = await Promise.all([
-      fetch(API + '/api/analytics?password=' + encodeURIComponent(pwd)),
+    const [sr, br, wr, fr, er] = await Promise.all([
+      fetch(API + '/api/stats?password=' + encodeURIComponent(pwd)),
       fetch(API + '/api/bookings?password=' + encodeURIComponent(pwd)),
       fetch(API + '/api/walkins?password=' + encodeURIComponent(pwd)),
       fetch(API + '/api/feedback?password=' + encodeURIComponent(pwd)),
+      fetch(API + '/api/expenses?password=' + encodeURIComponent(pwd)),
     ]);
     if (sr.status === 401) { showErr('Wrong password.'); btn.textContent = 'Access Dashboard'; btn.disabled = false; return; }
     stats = await sr.json();
     bookings = await br.json();
     walkins = await wr.json();
     feedback = await fr.json();
+    expenses = await er.json();
+
+    try {
+      const ir = await fetch(API + '/api/info');
+      const info = await ir.json();
+      if (info.businessName) { document.getElementById('sb-name').textContent = info.businessName; document.title = info.businessName + ' — Admin'; }
+    } catch (e) {}
+
     document.getElementById('login').style.display = 'none';
     document.getElementById('app').style.display = 'flex';
     renderOverview();
@@ -252,14 +285,12 @@ async function login() {
   }
 }
 
-function showErr(msg) {
-  const e = document.getElementById('err');
-  e.textContent = msg; e.style.display = 'block';
-}
+function showErr(msg) { const e = document.getElementById('err'); e.textContent = msg; e.style.display = 'block'; }
 
-const PAGE_TITLES = { overview: 'Overview', bookings: 'Bookings', walkins: 'Walk-ins', reviews: 'Reviews', danger: 'Danger Zone' };
+const PAGE_TITLES = { overview:'Overview', schedule:'Schedule', traffic:'Website Traffic', bookings:'Bookings', clients:'Clients', manual:'Manual Entry', walkins:'Walk-ins', availability:'Block Times', reviews:'Reviews', expenses:'Expenses', danger:'Danger Zone' };
 
 function showPage(page, el) {
+  currentPage = page;
   document.querySelectorAll('.nav-item').forEach((n) => n.classList.remove('active'));
   if (el) el.classList.add('active');
   const t = document.getElementById('mob-page-title');
@@ -267,9 +298,15 @@ function showPage(page, el) {
   document.getElementById('sidebar').classList.remove('open');
   document.getElementById('mob-overlay').classList.remove('open');
   if (page === 'overview') renderOverview();
+  else if (page === 'schedule') renderSchedule();
+  else if (page === 'traffic') renderTraffic();
   else if (page === 'bookings') renderBookings();
+  else if (page === 'clients') renderClients();
+  else if (page === 'manual') renderManualEntry();
   else if (page === 'walkins') renderWalkins();
+  else if (page === 'availability') renderAvailability();
   else if (page === 'reviews') renderReviews();
+  else if (page === 'expenses') renderExpenses();
   else if (page === 'danger') renderDanger();
 }
 
@@ -279,17 +316,16 @@ function toggleMobileMenu() {
 }
 
 function fmt12(t) {
-  if (!t) return '—';
+  if (!t || t === '00:00') return '—';
   const [h, m] = t.split(':'); const hr = parseInt(h);
   return (hr > 12 ? hr - 12 : hr || 12) + ':' + m + ' ' + (hr >= 12 ? 'PM' : 'AM');
 }
-function fmtDate(d) {
-  const [y, mo, day] = d.split('-');
-  return MONTHS[parseInt(mo) - 1] + ' ' + parseInt(day);
-}
-function locLabel(b) {
-  if (b.location === 'mobile') return '🚐 Mobile' + (b.address ? ' · ' + b.address : '');
-  return '📍 ' + (b.locationName || 'In-Shop');
+function fmtDate(d) { const [y, mo, day] = d.split('-'); return MONTHS[parseInt(mo) - 1] + ' ' + parseInt(day); }
+function isMobileBooking(b) { return b.location === 'mobile'; }
+function typeBadge(b) {
+  return isMobileBooking(b)
+    ? `<span style="background:rgba(245,158,11,0.12);color:var(--yellow);font-size:10px;font-weight:700;padding:3px 8px;border-radius:6px">🚗 Mobile</span>`
+    : `<span style="background:rgba(59,130,246,0.1);color:var(--primary);font-size:10px;font-weight:700;padding:3px 8px;border-radius:6px">📍 ${b.locationName || 'In-Shop'}</span>`;
 }
 
 // ── Overview ─────────────────────────────────────────────────
@@ -297,18 +333,19 @@ function renderOverview(period) {
   period = period || currentPeriod;
   currentPeriod = period;
   const today = new Date().toISOString().split('T')[0];
-  const confirmed = bookings.filter((b) => b.status === 'confirmed');
+  const allConfirmed = bookings.filter((b) => b.status === 'confirmed');
   const tabStyle = (p) => `padding:8px 18px;border-radius:8px;border:1.5px solid ${period === p ? 'var(--primary)' : 'var(--border2)'};background:${period === p ? 'var(--primary-glow)' : 'transparent'};color:${period === p ? 'var(--primary)' : 'var(--text2)'};font-family:inherit;font-size:13px;font-weight:600;cursor:pointer;transition:all 0.15s`;
   const tabs = `<div style="display:flex;gap:8px;margin-bottom:28px;flex-wrap:wrap">
     <button style="${tabStyle('today')}" onclick="renderOverview('today')">Today</button>
     <button style="${tabStyle('week')}" onclick="renderOverview('week')">This Week</button>
+    <button style="${tabStyle('30days')}" onclick="renderOverview('30days')">Past 30 Days</button>
     <button style="${tabStyle('alltime')}" onclick="renderOverview('alltime')">All Time</button>
   </div>`;
 
   if (period === 'today') {
-    const todayBks = confirmed.filter((b) => b.date === today).sort((a, b) => a.time.localeCompare(b.time));
+    const todayBks = allConfirmed.filter((b) => b.date === today).sort((a, b) => a.time.localeCompare(b.time));
     const revenue = todayBks.reduce((s, b) => s + b.servicePrice, 0);
-    const mobileC = todayBks.filter((b) => b.location === 'mobile').length;
+    const mobileC = todayBks.filter(isMobileBooking).length;
     const dateStr = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
     document.getElementById('main').innerHTML = `
       <div class="page-hdr"><h1>Overview</h1><p>${dateStr}</p></div>
@@ -334,13 +371,14 @@ function renderOverview(period) {
                 </div>
                 <div style="font-size:13px;color:var(--text2);margin-bottom:8px">${b.serviceName}</div>
                 <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
-                  <span style="background:${b.location === 'mobile' ? 'rgba(245,158,11,0.12)' : 'rgba(59,130,246,0.1)'};color:${b.location === 'mobile' ? 'var(--yellow)' : 'var(--primary)'};font-size:11px;font-weight:700;padding:3px 9px;border-radius:6px">${locLabel(b)}</span>
+                  ${typeBadge(b)}${b.address && isMobileBooking(b) ? `<span style="font-size:12px;color:var(--text3)">${b.address}</span>` : ''}
                   ${b.phone ? `<span style="font-size:11px;color:var(--text3)">${b.phone}</span>` : ''}
                 </div>
               </div>
             </div>`).join('') : `<div style="text-align:center;padding:52px 20px;color:var(--text3)">
             <div style="font-size:36px;margin-bottom:12px">📅</div>
             <div style="font-size:15px;font-weight:700;color:var(--text2);margin-bottom:6px">No appointments today</div>
+            <div style="font-size:13px;line-height:1.6">Keep sharing your booking link — your next customer is on their way.</div>
           </div>`}
         </div>
       </div>`;
@@ -350,11 +388,8 @@ function renderOverview(period) {
   if (period === 'week') {
     const day = new Date().getDay();
     const mondayOffset = day === 0 ? -6 : 1 - day;
-    const weekDays = Array.from({ length: 7 }, (_, i) => {
-      const dd = new Date(); dd.setDate(dd.getDate() + mondayOffset + i);
-      return dd.toISOString().split('T')[0];
-    });
-    const weekBks = confirmed.filter((b) => b.date >= weekDays[0] && b.date <= weekDays[6]);
+    const weekDays = Array.from({ length: 7 }, (_, i) => { const dd = new Date(); dd.setDate(dd.getDate() + mondayOffset + i); return dd.toISOString().split('T')[0]; });
+    const weekBks = allConfirmed.filter((b) => b.date >= weekDays[0] && b.date <= weekDays[6]);
     const revenue = weekBks.reduce((s, b) => s + b.servicePrice, 0);
     const upcoming = weekBks.filter((b) => b.date >= today).sort((a, b) => a.date.localeCompare(b.date) || a.time.localeCompare(b.time));
     const upcomingRev = upcoming.reduce((s, b) => s + b.servicePrice, 0);
@@ -380,7 +415,7 @@ function renderOverview(period) {
             ${upcoming.length ? upcoming.slice(0, 8).map((b) => `<div class="sched-item">
                 <span class="sched-date">${fmtDate(b.date)}</span>
                 <span class="sched-time">${fmt12(b.time)}</span>
-                <div style="flex:1"><div class="sched-name">${b.customerName}</div><div class="sched-svc">${locLabel(b)}</div></div>
+                <div style="flex:1"><div class="sched-name">${b.customerName}</div><div class="sched-svc">${isMobileBooking(b) ? '🚗 ' + (b.address || 'Mobile') : b.serviceName}</div></div>
                 <span class="sched-price">$${b.servicePrice}</span>
               </div>`).join('') : '<div class="no-sched">No more appointments this week</div>'}
           </div>
@@ -391,171 +426,516 @@ function renderOverview(period) {
       if (!ctx) return;
       new Chart(ctx.getContext('2d'), {
         type: 'bar',
-        data: {
-          labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
-          datasets: [{
-            data: weekDays.map((d) => weekBks.filter((b) => b.date === d).reduce((s, b) => s + b.servicePrice, 0)),
-            backgroundColor: weekDays.map((d) => d === today ? 'rgba(59,130,246,0.55)' : 'rgba(59,130,246,0.2)'),
-            borderColor: weekDays.map((d) => d === today ? 'rgba(59,130,246,1)' : 'rgba(59,130,246,0.6)'),
-            borderWidth: 1.5, borderRadius: 6,
-          }],
-        },
+        data: { labels: ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'], datasets: [{
+          data: weekDays.map((d) => weekBks.filter((b) => b.date === d).reduce((s, b) => s + b.servicePrice, 0)),
+          backgroundColor: weekDays.map((d) => d === today ? 'rgba(59,130,246,0.55)' : 'rgba(59,130,246,0.2)'),
+          borderColor: weekDays.map((d) => d === today ? 'rgba(59,130,246,1)' : 'rgba(59,130,246,0.6)'),
+          borderWidth: 1.5, borderRadius: 6 }] },
         options: { responsive: true, plugins: { legend: { display: false } }, scales: {
           x: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { color: 'rgba(255,255,255,0.3)', font: { size: 11 } } },
-          y: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { color: 'rgba(255,255,255,0.3)', font: { size: 11 }, callback: (v) => '$' + v } },
-        } },
+          y: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { color: 'rgba(255,255,255,0.3)', font: { size: 11 }, callback: (v) => '$' + v } } } },
       });
     }, 50);
     return;
   }
 
-  // All time
-  const upcoming = confirmed.filter((b) => b.date >= today).sort((a, b) => a.date.localeCompare(b.date) || a.time.localeCompare(b.time));
-  document.getElementById('main').innerHTML = `
-    <div class="page-hdr"><h1>Overview</h1><p>All-time performance</p></div>
-    ${tabs}
-    <div class="stats-row">
-      <div class="stat-card green"><div class="stat-lbl">Total Revenue</div><div class="stat-num green">$${(stats.totalRevenue || 0).toLocaleString()}</div><div class="stat-sub">From confirmed bookings</div></div>
-      <div class="stat-card blue"><div class="stat-lbl">Total Bookings</div><div class="stat-num blue">${stats.totalBookings || 0}</div><div class="stat-sub">All time confirmed</div></div>
-      <div class="stat-card yellow"><div class="stat-lbl">Avg Rating</div><div class="stat-num yellow">${stats.avgRating || '—'}</div><div class="stat-sub">From review flow</div></div>
-      <div class="stat-card blue"><div class="stat-lbl">Review Rate</div><div class="stat-num">${stats.reviewRate || 0}%</div><div class="stat-sub">Industry avg ~8%</div></div>
-    </div>
-    <div class="stats-row" style="grid-template-columns:repeat(3,1fr)">
-      <div class="stat-card blue"><div class="stat-lbl">Walk-ins</div><div class="stat-num">${walkins.length}</div><div class="stat-sub">Manually added</div></div>
-      <div class="stat-card green"><div class="stat-lbl">Total Reviews</div><div class="stat-num green">${feedback.length}</div><div class="stat-sub">Collected via SMS</div></div>
-      <div class="stat-card blue"><div class="stat-lbl">Upcoming</div><div class="stat-num">${upcoming.length}</div><div class="stat-sub">Confirmed, not yet done</div></div>
-    </div>
-    <div class="charts-row">
-      <div class="chart-card">
-        <div class="card-title">Revenue — Last 14 Days</div>
-        <div class="card-sub">Daily revenue from confirmed bookings</div>
-        <canvas id="rev-chart" height="100"></canvas>
+  if (period === '30days') {
+    const d30 = new Date(); d30.setDate(d30.getDate() - 29);
+    const start30 = d30.toISOString().split('T')[0];
+    const bks30 = allConfirmed.filter((b) => b.date >= start30);
+    const revenue = bks30.reduce((s, b) => s + b.servicePrice, 0);
+    const upcoming = allConfirmed.filter((b) => b.date >= today).sort((a, b) => a.date.localeCompare(b.date) || a.time.localeCompare(b.time));
+    document.getElementById('main').innerHTML = `
+      <div class="page-hdr"><h1>Overview</h1><p>Last 30 days performance</p></div>
+      ${tabs}
+      <div class="stats-row">
+        <div class="stat-card green"><div class="stat-lbl">Revenue (30d)</div><div class="stat-num green">$${revenue.toLocaleString()}</div><div class="stat-sub">Last 30 days</div></div>
+        <div class="stat-card blue"><div class="stat-lbl">Bookings (30d)</div><div class="stat-num blue">${bks30.length}</div><div class="stat-sub">Confirmed</div></div>
+        <div class="stat-card yellow"><div class="stat-lbl">Avg Rating</div><div class="stat-num yellow">${stats.avgRating || '—'}</div><div class="stat-sub">All-time average</div></div>
+        <div class="stat-card blue"><div class="stat-lbl">Review Rate</div><div class="stat-num">${stats.reviewRate}%</div><div class="stat-sub">Industry avg ~8%</div></div>
+      </div>
+      <div class="charts-row">
+        <div class="chart-card">
+          <div class="card-title">Revenue — Last 30 Days</div>
+          <div class="card-sub">Daily revenue from confirmed bookings</div>
+          <canvas id="rev-chart" height="100"></canvas>
+        </div>
+        <div class="chart-card">
+          <div class="card-title">Conversion Rate</div>
+          <div class="card-sub">Website visitors → booked appointments</div>
+          <div style="text-align:center;padding:20px 0">
+            <div style="font-size:3.5rem;font-weight:800;color:var(--primary);letter-spacing:-0.03em">${stats.convRate}%</div>
+            <div style="font-size:13px;color:var(--text3);margin-top:4px">${stats.homeViews} visits → ${stats.totalBookings} bookings</div>
+          </div>
+          <div class="conv-meter">
+            <div class="conv-bar-bg"><div class="conv-bar-fill" id="conv-fill" style="width:0%"></div></div>
+            <div class="conv-labels"><span>0%</span><span>Industry avg 3%</span><span>10%</span></div>
+          </div>
+          <div style="margin-top:20px;display:flex;flex-direction:column;gap:8px">
+            <div style="display:flex;justify-content:space-between;font-size:13px"><span style="color:var(--text2)">Total site views</span><span style="font-weight:700">${stats.totalViews.toLocaleString()}</span></div>
+            <div style="display:flex;justify-content:space-between;font-size:13px"><span style="color:var(--text2)">Walk-in customers</span><span style="font-weight:700">${stats.totalWalkins}</span></div>
+          </div>
+        </div>
       </div>
       <div class="chart-card">
         <div class="card-title">Upcoming Appointments</div>
-        <div class="card-sub">${upcoming.length} confirmed</div>
+        <div class="card-sub">Next confirmed bookings</div>
         <div class="schedule-list">
           ${upcoming.length ? upcoming.slice(0, 8).map((b) => `<div class="sched-item">
               <span class="sched-date">${fmtDate(b.date)}</span>
               <span class="sched-time">${fmt12(b.time)}</span>
-              <div style="flex:1"><div class="sched-name">${b.customerName}</div><div class="sched-svc">${locLabel(b)}</div></div>
+              <div style="flex:1"><div class="sched-name">${b.customerName}</div><div class="sched-svc">${isMobileBooking(b) ? '🚗 ' + (b.address || 'Mobile') : b.serviceName}</div></div>
               <span class="sched-price">$${b.servicePrice}</span>
             </div>`).join('') : '<div class="no-sched">No upcoming bookings</div>'}
         </div>
-      </div>
+      </div>`;
+    setTimeout(() => {
+      const ctx = document.getElementById('rev-chart');
+      if (!ctx) return;
+      const days = Object.keys(stats.revenueByDay);
+      new Chart(ctx.getContext('2d'), {
+        type: 'line',
+        data: { labels: days.map((d) => { const [, m, day] = d.split('-'); return `${parseInt(m)}/${parseInt(day)}`; }),
+          datasets: [{ data: days.map((d) => stats.revenueByDay[d]), borderColor: '#10b981', backgroundColor: 'rgba(16,185,129,0.08)', borderWidth: 2, tension: 0.4, fill: true, pointRadius: 0, pointHoverRadius: 4 }] },
+        options: { responsive: true, plugins: { legend: { display: false } }, scales: {
+          x: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { color: 'rgba(255,255,255,0.3)', font: { size: 11 } } },
+          y: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { color: 'rgba(255,255,255,0.3)', font: { size: 11 }, callback: (v) => '$' + v } } } },
+      });
+      const cf = document.getElementById('conv-fill');
+      if (cf) cf.style.width = Math.min(parseFloat(stats.convRate) * 10, 100) + '%';
+    }, 50);
+    return;
+  }
+
+  // All time
+  const earned = stats.earnedRevenue ?? 0, upcomingRevAll = stats.upcomingRevenue ?? 0;
+  const totalExp = stats.totalExpenses ?? 0, profit = stats.netProfit ?? (earned - totalExp);
+  document.getElementById('main').innerHTML = `
+    <div class="page-hdr"><h1>Overview</h1><p>All-time performance</p></div>
+    ${tabs}
+    <div class="stats-row">
+      <div class="stat-card green"><div class="stat-lbl">Earned Revenue</div><div class="stat-num green">$${earned.toLocaleString()}</div><div class="stat-sub">Completed appointments</div></div>
+      <div class="stat-card blue"><div class="stat-lbl">Upcoming Revenue</div><div class="stat-num blue">$${upcomingRevAll.toLocaleString()}</div><div class="stat-sub">Confirmed future bookings</div></div>
+      <div class="stat-card red"><div class="stat-lbl">Total Expenses</div><div class="stat-num" style="color:var(--red)">$${totalExp.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})}</div><div class="stat-sub">All logged costs</div></div>
+      <div class="stat-card ${profit >= 0 ? 'green' : 'red'}"><div class="stat-lbl">Net Profit</div><div class="stat-num" style="color:${profit >= 0 ? 'var(--green)' : 'var(--red)'}">${profit < 0 ? '-' : ''}$${Math.abs(profit).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})}</div><div class="stat-sub">Earned minus expenses</div></div>
+    </div>
+    <div class="stats-row">
+      <div class="stat-card blue"><div class="stat-lbl">Total Bookings</div><div class="stat-num blue">${stats.totalBookings}</div><div class="stat-sub">All time confirmed</div></div>
+      <div class="stat-card yellow"><div class="stat-lbl">Avg Rating</div><div class="stat-num yellow">${stats.avgRating || '—'}</div><div class="stat-sub">From review flow</div></div>
+      <div class="stat-card blue"><div class="stat-lbl">Review Rate</div><div class="stat-num">${stats.reviewRate}%</div><div class="stat-sub">Industry avg ~8%</div></div>
+      <div class="stat-card green"><div class="stat-lbl">Conversion Rate</div><div class="stat-num green">${stats.convRate}%</div><div class="stat-sub">Visits → bookings</div></div>
+    </div>
+    <div class="stats-row">
+      <div class="stat-card blue"><div class="stat-lbl">Site Views</div><div class="stat-num blue">${stats.totalViews.toLocaleString()}</div><div class="stat-sub">All pages</div></div>
+      <div class="stat-card blue"><div class="stat-lbl">Walk-ins</div><div class="stat-num">${stats.totalWalkins}</div><div class="stat-sub">Manually added</div></div>
+      <div class="stat-card green"><div class="stat-lbl">Total Reviews</div><div class="stat-num green">${feedback.length}</div><div class="stat-sub">Collected via SMS</div></div>
+      <div class="stat-card blue"><div class="stat-lbl">Expenses Logged</div><div class="stat-num">${expenses.length}</div><div class="stat-sub">Across all categories</div></div>
     </div>`;
-  setTimeout(() => {
-    const ctx = document.getElementById('rev-chart');
-    if (!ctx || !stats.revenueByDay) return;
-    const days = Object.keys(stats.revenueByDay);
-    new Chart(ctx.getContext('2d'), {
-      type: 'line',
-      data: {
-        labels: days.map((d) => { const [, m, day] = d.split('-'); return `${parseInt(m)}/${parseInt(day)}`; }),
-        datasets: [{
-          data: days.map((d) => stats.revenueByDay[d]),
-          borderColor: '#10b981', backgroundColor: 'rgba(16,185,129,0.08)',
-          borderWidth: 2, tension: 0.4, fill: true, pointRadius: 0, pointHoverRadius: 4,
-        }],
-      },
-      options: { responsive: true, plugins: { legend: { display: false } }, scales: {
-        x: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { color: 'rgba(255,255,255,0.3)', font: { size: 11 } } },
-        y: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { color: 'rgba(255,255,255,0.3)', font: { size: 11 }, callback: (v) => '$' + v } },
-      } },
-    });
-  }, 50);
 }
 
-// ── Bookings ─────────────────────────────────────────────────
+// ── Schedule ─────────────────────────────────────────────────
+function renderSchedule() {
+  const today = new Date().toISOString().split('T')[0];
+  const confirmed = bookings.filter((b) => b.status === 'confirmed');
+  const upcoming = confirmed.filter((b) => b.date >= today).sort((a, b) => a.date.localeCompare(b.date) || a.time.localeCompare(b.time));
+  const past = confirmed.filter((b) => b.date < today).sort((a, b) => b.date.localeCompare(a.date) || b.time.localeCompare(a.time));
+  const mob = window.innerWidth < 640;
+
+  const upcomingContent = mob
+    ? `<div class="mob-cards-wrap">${upcoming.length ? upcoming.map((b) => `<div class="mob-card">
+          <div class="mob-card-top"><span class="mob-card-date">${fmtDate(b.date)} · ${fmt12(b.time)}</span><span style="color:var(--green);font-weight:700;font-size:15px">$${b.servicePrice}</span></div>
+          <div class="mob-card-name">${b.customerName}</div>
+          <div class="mob-card-sub">${b.phone || '—'}</div>
+          <div class="mob-card-meta">${b.serviceName}<br>${typeBadge(b)}</div>
+          <div class="mob-card-actions">
+            <span class="badge badge-confirmed" style="align-self:center">Confirmed</span>
+            <button onclick="markNoShow('${b.id}')" style="padding:7px 14px;border-radius:8px;border:1.5px solid var(--red);background:var(--red-bg);color:var(--red);font-family:inherit;font-size:12px;font-weight:700;cursor:pointer">No-Show</button>
+          </div>
+        </div>`).join('') : '<div class="mob-empty">No upcoming bookings</div>'}</div>`
+    : `<table>
+        <thead><tr><th>Date</th><th>Time</th><th>Customer</th><th>Service</th><th>Type</th><th>Price</th><th>Status</th><th></th></tr></thead>
+        <tbody>${upcoming.length ? upcoming.map((b) => `<tr>
+          <td style="font-weight:600;color:var(--primary)">${fmtDate(b.date)}</td>
+          <td style="color:var(--text2)">${fmt12(b.time)}</td>
+          <td><div style="font-weight:600">${b.customerName}</div><div style="font-size:11px;color:var(--text3)">${b.phone || ''}</div></td>
+          <td style="color:var(--text2)">${b.serviceName}</td>
+          <td>${typeBadge(b)}${b.address && isMobileBooking(b) ? `<div style="font-size:11px;color:var(--text3);margin-top:3px">${b.address}</div>` : ''}</td>
+          <td style="font-weight:700;color:var(--green)">$${b.servicePrice}</td>
+          <td><span class="badge badge-confirmed">Confirmed</span></td>
+          <td><button onclick="markNoShow('${b.id}')" style="padding:5px 11px;border-radius:7px;border:1.5px solid var(--red);background:var(--red-bg);color:var(--red);font-family:inherit;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap">No-Show</button></td>
+        </tr>`).join('') : '<tr><td colspan="8" style="text-align:center;color:var(--text3);padding:40px">No upcoming bookings</td></tr>'}
+        </tbody></table>`;
+
+  const pastContent = mob
+    ? `<div class="mob-cards-wrap">${past.slice(0, 20).length ? past.slice(0, 20).map((b) => `<div class="mob-card">
+          <div class="mob-card-top"><span class="mob-card-date">${fmtDate(b.date)} · ${fmt12(b.time)}</span><span style="color:var(--green);font-weight:700">$${b.servicePrice}</span></div>
+          <div class="mob-card-name" style="color:var(--text2)">${b.customerName}</div>
+          <div class="mob-card-meta">${b.serviceName} · ${typeBadge(b)}</div>
+        </div>`).join('') : '<div class="mob-empty">No past bookings</div>'}</div>`
+    : `<table>
+        <thead><tr><th>Date</th><th>Time</th><th>Customer</th><th>Service</th><th>Type</th><th>Price</th></tr></thead>
+        <tbody>${past.slice(0, 20).length ? past.slice(0, 20).map((b) => `<tr>
+          <td style="color:var(--text3)">${fmtDate(b.date)}</td>
+          <td style="color:var(--text3)">${fmt12(b.time)}</td>
+          <td style="font-weight:600">${b.customerName}</td>
+          <td style="color:var(--text2)">${b.serviceName}</td>
+          <td>${typeBadge(b)}</td>
+          <td style="font-weight:700;color:var(--green)">$${b.servicePrice}</td>
+        </tr>`).join('') : '<tr><td colspan="6" style="text-align:center;color:var(--text3);padding:40px">No past bookings</td></tr>'}
+        </tbody></table>`;
+
+  document.getElementById('main').innerHTML = `
+    <div class="page-hdr"><h1>Schedule</h1><p>${upcoming.length} upcoming · ${past.length} past</p></div>
+    <div class="table-wrap"><div class="table-head"><span class="table-head-title">Upcoming Appointments</span></div>${upcomingContent}</div>
+    <div class="table-wrap"><div class="table-head"><span class="table-head-title">Past Appointments</span></div>${pastContent}</div>`;
+}
+
+// ── Traffic ──────────────────────────────────────────────────
+function renderTraffic() {
+  const views = stats.viewsByDay;
+  const totalThisMonth = Object.entries(views).filter(([d]) => d.startsWith(new Date().toISOString().slice(0, 7))).reduce((s, [, v]) => s + v, 0);
+  document.getElementById('main').innerHTML = `
+    <div class="page-hdr"><h1>Website Traffic</h1><p>Visits tracked across all pages of your website</p></div>
+    <div class="traffic-grid">
+      <div class="traffic-card"><div class="traffic-num" style="color:var(--primary)">${stats.totalViews.toLocaleString()}</div><div class="traffic-lbl">Total Views</div></div>
+      <div class="traffic-card"><div class="traffic-num" style="color:var(--primary)">${totalThisMonth}</div><div class="traffic-lbl">This Month</div></div>
+      <div class="traffic-card"><div class="traffic-num" style="color:var(--green)">${stats.convRate}%</div><div class="traffic-lbl">Conversion Rate</div></div>
+      <div class="traffic-card"><div class="traffic-num" style="color:var(--yellow)">${stats.totalBookings}</div><div class="traffic-lbl">Bookings from Site</div></div>
+    </div>
+    <div class="chart-card" style="margin-bottom:20px">
+      <div class="card-title">Daily Website Visits — Last 30 Days</div>
+      <div class="card-sub">Unique page loads across all pages</div>
+      <canvas id="views-chart" height="100"></canvas>
+    </div>
+    <div class="chart-card">
+      <div class="card-title">How conversion works</div>
+      <div class="card-sub" style="margin-bottom:20px">Every visitor is a potential booking. Your site is always selling.</div>
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px">
+        ${[['↗','Visitor lands on site','Every Google search, referral, or social click'],['📄','Browses your services','Sees pricing, process, and reviews'],['📅','Clicks Book Now','Goes to your booking page'],['✓','Confirms appointment','You get an SMS instantly']].map(([icon, title, desc]) =>
+          `<div style="background:var(--bg3);border-radius:10px;padding:16px"><div style="font-size:22px;margin-bottom:10px">${icon}</div><div style="font-size:13px;font-weight:700;margin-bottom:4px">${title}</div><div style="font-size:12px;color:var(--text3);line-height:1.5">${desc}</div></div>`).join('')}
+      </div>
+    </div>`;
+  const ctx = document.getElementById('views-chart').getContext('2d');
+  new Chart(ctx, {
+    type: 'bar',
+    data: { labels: Object.keys(views).map((d) => { const [, m, day] = d.split('-'); return `${parseInt(m)}/${parseInt(day)}`; }),
+      datasets: [{ data: Object.values(views), backgroundColor: 'rgba(59,130,246,0.2)', borderColor: 'rgba(59,130,246,0.7)', borderWidth: 1.5, borderRadius: 4 }] },
+    options: { responsive: true, plugins: { legend: { display: false } }, scales: {
+      x: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { color: 'rgba(255,255,255,0.3)', font: { size: 11 } } },
+      y: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { color: 'rgba(255,255,255,0.3)', font: { size: 11 }, stepSize: 1 } } } },
+  });
+}
+
+// ── All Bookings ─────────────────────────────────────────────
 function renderBookings(filter) {
   filter = filter || currentBookingsFilter;
   currentBookingsFilter = filter;
-  const list = filter === 'all' ? bookings : bookings.filter((b) => b.status === filter);
+  const online = bookings.filter((b) => b.source !== 'manual');
+  const manual = bookings.filter((b) => b.source === 'manual');
+  const list = filter === 'online' ? online : filter === 'manual' ? manual : bookings;
+  const tabStyle = (f) => `padding:8px 18px;border-radius:8px;border:1.5px solid ${filter === f ? 'var(--primary)' : 'var(--border2)'};background:${filter === f ? 'var(--primary-glow)' : 'transparent'};color:${filter === f ? 'var(--primary)' : 'var(--text2)'};font-family:inherit;font-size:13px;font-weight:600;cursor:pointer;transition:all 0.15s`;
   const mob = window.innerWidth < 640;
 
   const listContent = mob
-    ? `<div class="mob-cards-wrap">${list.length ? list.map((b) => `<div class="mob-card">
-          <div class="mob-card-top">
-            <span class="badge badge-${b.status}">${b.status.replace(/_/g, ' ')}</span>
-            <span style="font-family:monospace;font-size:11px;color:var(--text3)">#${b.shortId || b.id.slice(-6)}</span>
-          </div>
+    ? `<div class="mob-cards-wrap">${list.length ? list.map((b) => {
+        const statusBadge = b.status === 'noshow' ? `<span class="badge badge-noshow">No-Show</span>` : `<span class="badge badge-${b.status}">${b.status.replace(/_/g,' ')}</span>`;
+        const sourceBadge = `<span class="badge ${b.source === 'manual' ? 'badge-pending' : 'badge-confirmed'}">${b.source === 'manual' ? 'Phone' : 'Online'}</span>`;
+        const tipLine = b.tipAmount ? `<br><span style="color:var(--yellow);font-weight:700">+$${b.tipAmount} tip</span>` : '';
+        return `<div class="mob-card">
+          <div class="mob-card-top"><div style="display:flex;gap:6px;flex-wrap:wrap">${statusBadge}${sourceBadge}</div><span style="font-family:monospace;font-size:11px;color:var(--text3)">#${b.shortId || b.id.slice(-6)}</span></div>
           <div class="mob-card-name">${b.customerName}</div>
           <div class="mob-card-sub">${b.phone || '—'}</div>
-          <div class="mob-card-meta">
-            ${b.serviceName}<br>
-            ${locLabel(b)}<br>
-            ${b.date} · ${fmt12(b.time)} · <span style="color:var(--green);font-weight:700">$${b.servicePrice}</span>
-          </div>
-        </div>`).join('') : '<div class="mob-empty">No bookings in this category</div>'}</div>`
+          <div class="mob-card-meta">${b.serviceName}<br>${typeBadge(b)}${b.address && isMobileBooking(b) ? ' · ' + b.address : ''}<br>${b.date} · ${fmt12(b.time)} · <span style="color:var(--green);font-weight:700">$${b.servicePrice}</span>${tipLine}</div>
+          ${b.status === 'confirmed' ? `<div class="mob-card-actions">
+            <button onclick="addTip('${b.id}',this)" style="padding:7px 14px;border-radius:8px;border:1.5px solid var(--yellow);background:var(--yellow-bg);color:var(--yellow);font-family:inherit;font-size:12px;font-weight:700;cursor:pointer">${b.tipAmount ? 'Edit Tip' : '+ Tip'}</button>
+            <button onclick="markNoShow('${b.id}')" style="padding:7px 14px;border-radius:8px;border:1.5px solid var(--red);background:var(--red-bg);color:var(--red);font-family:inherit;font-size:12px;font-weight:700;cursor:pointer">No-Show</button>
+          </div>` : ''}
+        </div>`;
+      }).join('') : '<div class="mob-empty">No bookings in this category</div>'}</div>`
     : `<table>
-        <thead><tr><th>ID</th><th>Customer</th><th>Service</th><th>Location</th><th>Date</th><th>Time</th><th>Price</th><th>Status</th></tr></thead>
-        <tbody>${list.length ? list.map((b) => `<tr>
+        <thead><tr><th>ID</th><th>Customer</th><th>Service</th><th>Type</th><th>Date</th><th>Time</th><th>Price</th><th>Source</th><th>Status</th><th></th></tr></thead>
+        <tbody>${list.length ? list.map((b) => {
+          const statusBadge = b.status === 'noshow' ? `<span class="badge badge-noshow">No-Show</span>` : `<span class="badge badge-${b.status}">${b.status.replace(/_/g,' ')}</span>`;
+          const priceCell = b.tipAmount ? `<div style="font-weight:700;color:var(--green)">$${b.servicePrice}</div><div style="font-size:11px;color:var(--yellow);font-weight:700">+$${b.tipAmount} tip</div>` : `<span style="font-weight:700;color:var(--green)">$${b.servicePrice}</span>`;
+          const actionCell = b.status === 'confirmed'
+            ? `<div style="display:flex;gap:6px;flex-wrap:wrap">
+                <button onclick="addTip('${b.id}',this)" style="padding:5px 10px;border-radius:7px;border:1.5px solid var(--yellow);background:var(--yellow-bg);color:var(--yellow);font-family:inherit;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap">${b.tipAmount ? 'Edit Tip' : '+ Tip'}</button>
+                <button onclick="markNoShow('${b.id}')" style="padding:5px 10px;border-radius:7px;border:1.5px solid var(--red);background:var(--red-bg);color:var(--red);font-family:inherit;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap">No-Show</button>
+              </div>` : '';
+          return `<tr>
           <td style="font-family:monospace;font-size:11px;color:var(--text3)">${b.shortId || b.id.slice(-6)}</td>
-          <td><div style="font-weight:600">${b.customerName}</div><div style="font-size:11px;color:var(--text3)">${b.phone || ''}</div></td>
+          <td><div style="font-weight:600">${b.customerName}</div><div style="font-size:11px;color:var(--text3)">${b.phone || '—'}</div></td>
           <td style="color:var(--text2)">${b.serviceName}</td>
-          <td style="color:var(--text2)">${locLabel(b)}</td>
-          <td style="color:var(--text3)">${b.date}</td>
-          <td style="color:var(--text3)">${fmt12(b.time)}</td>
-          <td style="font-weight:700;color:var(--green)">$${b.servicePrice}</td>
-          <td><span class="badge badge-${b.status}">${b.status.replace(/_/g, ' ')}</span></td>
-        </tr>`).join('') : '<tr><td colspan="8" style="text-align:center;color:var(--text3);padding:40px">No bookings in this category</td></tr>'}
-        </tbody>
-      </table>`;
+          <td>${typeBadge(b)}${b.address && isMobileBooking(b) ? `<div style="font-size:11px;color:var(--text3);margin-top:3px">${b.address}</div>` : ''}</td>
+          <td style="color:var(--text2)">${b.date}</td>
+          <td style="color:var(--text2)">${fmt12(b.time)}</td>
+          <td>${priceCell}</td>
+          <td><span class="badge ${b.source === 'manual' ? 'badge-pending' : 'badge-confirmed'}">${b.source === 'manual' ? 'Phone / In-Person' : 'Online'}</span></td>
+          <td>${statusBadge}</td>
+          <td>${actionCell}</td>
+        </tr>`;}).join('') : `<tr><td colspan="10" style="text-align:center;color:var(--text3);padding:40px">No bookings in this category</td></tr>`}
+        </tbody></table>`;
 
-  const tabStyle = (f) => `tab-btn${filter === f ? ' active' : ''}`;
   document.getElementById('main').innerHTML = `
-    <div class="page-hdr"><h1>Bookings</h1><p>${bookings.length} total</p></div>
+    <div class="page-hdr"><h1>Bookings</h1><p>${bookings.length} total · ${online.length} online · ${manual.length} phone / in-person</p></div>
+    <div style="display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap">
+      <button style="${tabStyle('all')}" onclick="renderBookings('all')">All Bookings</button>
+      <button style="${tabStyle('online')}" onclick="renderBookings('online')">Online</button>
+      <button style="${tabStyle('manual')}" onclick="renderBookings('manual')">Phone &amp; In-Person</button>
+    </div>
+    <div class="table-wrap">${listContent}</div>`;
+}
+
+// ── Clients ──────────────────────────────────────────────────
+function renderClients() {
+  const clientMap = {};
+  bookings.filter((b) => b.status === 'confirmed' || b.status === 'noshow').forEach((b) => {
+    const key = b.phone ? b.phone.replace(/\D/g, '') : '__' + b.customerName.toLowerCase().trim();
+    if (!clientMap[key]) {
+      clientMap[key] = { name: b.customerName, phone: b.phone || '—', visits: 0, noshowCount: 0, totalSpent: 0, services: {}, firstVisit: b.date, lastVisit: b.date, onlineCount: 0, manualCount: 0, mobileCount: 0, inShopCount: 0, latestConfirmedId: null, latestConfirmedDate: null };
+    }
+    const c = clientMap[key];
+    if (b.status === 'confirmed') {
+      c.visits++; c.totalSpent += Number(b.servicePrice) || 0;
+      c.services[b.serviceName] = (c.services[b.serviceName] || 0) + 1;
+      if (b.source === 'manual') c.manualCount++; else c.onlineCount++;
+      if (isMobileBooking(b)) c.mobileCount++; else c.inShopCount++;
+      if (!c.latestConfirmedDate || b.date > c.latestConfirmedDate) { c.latestConfirmedDate = b.date; c.latestConfirmedId = b.id; }
+    }
+    if (b.status === 'noshow') c.noshowCount++;
+    if (b.date < c.firstVisit) c.firstVisit = b.date;
+    if (b.date > c.lastVisit) c.lastVisit = b.date;
+  });
+
+  const clients = Object.values(clientMap).sort((a, b) => (a.visits > 0) !== (b.visits > 0) ? (a.visits > 0 ? -1 : 1) : b.totalSpent - a.totalSpent);
+  const mob = window.innerWidth < 640;
+
+  document.getElementById('main').innerHTML = `
+    <div class="page-hdr"><h1>Clients</h1><p>${clients.filter((c) => c.visits > 0).length} confirmed customers${clients.filter((c) => c.visits === 0 && c.noshowCount > 0).length > 0 ? ' · ' + clients.filter((c) => c.visits === 0 && c.noshowCount > 0).length + ' no-show only' : ''} · sorted by total spend</p></div>
     <div class="table-wrap">
-      <div class="table-head">
-        <span class="table-head-title">All Bookings</span>
-        <div class="tab-row">
-          <button class="${tabStyle('all')}" onclick="renderBookings('all')">All</button>
-          <button class="${tabStyle('pending')}" onclick="renderBookings('pending')">Pending</button>
-          <button class="${tabStyle('confirmed')}" onclick="renderBookings('confirmed')">Confirmed</button>
-          <button class="${tabStyle('denied')}" onclick="renderBookings('denied')">Denied</button>
-        </div>
-      </div>
-      ${listContent}
+      ${mob ? `<div class="mob-cards-wrap">${clients.length ? clients.map((c) => {
+          const isNoShowOnly = c.visits === 0 && c.noshowCount > 0;
+          const topService = Object.entries(c.services).sort((a, b) => b[1] - a[1])[0];
+          const isRepeat = c.visits > 1;
+          const sourceLabel = c.onlineCount > 0 && c.manualCount > 0 ? 'Online + Phone' : c.onlineCount > 0 ? 'Online' : 'Phone / In-Person';
+          return `<div class="mob-card" style="${isNoShowOnly ? 'opacity:0.7' : ''}">
+            <div class="mob-card-top">
+              <div style="display:flex;align-items:center;gap:10px">
+                <div style="width:36px;height:36px;border-radius:50%;background:${isNoShowOnly ? 'var(--red-bg)' : 'var(--bg4)'};display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:${isNoShowOnly ? 'var(--red)' : 'var(--text)'};flex-shrink:0">${c.name[0].toUpperCase()}</div>
+                <div><div style="font-weight:700;font-size:15px">${c.name}${isNoShowOnly ? ` <span style="background:rgba(239,68,68,0.12);color:var(--red);font-size:10px;font-weight:700;padding:2px 7px;border-radius:5px">NO SHOW</span>` : ''}</div><div style="font-size:12px;color:var(--text3)">${c.phone}</div></div>
+              </div>
+              <div style="text-align:right">
+                <div style="font-weight:700;font-size:16px;color:${isNoShowOnly ? 'var(--text3)' : 'var(--green)'}">${isNoShowOnly ? '—' : '$' + c.totalSpent.toLocaleString()}</div>
+                ${!isNoShowOnly ? `<div style="font-size:11px;color:var(--text3)">${c.visits} visit${c.visits !== 1 ? 's' : ''}${isRepeat ? ' · <span style="color:var(--primary)">Repeat</span>' : ''}</div>` : `<div style="font-size:11px;color:var(--red)">${c.noshowCount}× No-Show</div>`}
+              </div>
+            </div>
+            ${!isNoShowOnly ? `<div class="mob-card-meta" style="margin-top:6px">${topService ? topService[0] + ' · ' : ''}${sourceLabel}<br>${c.mobileCount > 0 && c.inShopCount > 0 ? `📍 ${c.inShopCount}× In-Shop · 🚗 ${c.mobileCount}× Mobile` : c.mobileCount > 0 ? '🚗 Mobile' : '📍 In-Shop'} · Last: ${fmtDate(c.lastVisit)}</div>` : ''}
+            <div class="mob-card-actions">
+              ${c.phone !== '—' ? `<button onclick="sendWinback('${c.phone}','${c.name.replace(/'/g,"\\'")}',this)" style="padding:7px 14px;border-radius:8px;border:1.5px solid var(--primary);background:var(--primary-glow);color:var(--primary);font-family:inherit;font-size:12px;font-weight:700;cursor:pointer">📲 Win-Back</button>` : ''}
+              ${c.phone !== '—' ? `<button onclick="sendReview('${c.phone}','${c.name.replace(/'/g,"\\'")}',this)" style="padding:7px 14px;border-radius:8px;border:1.5px solid var(--yellow);background:var(--yellow-bg);color:var(--yellow);font-family:inherit;font-size:12px;font-weight:700;cursor:pointer">⭐ Review</button>` : ''}
+              ${c.latestConfirmedId ? `<button onclick="markNoShow('${c.latestConfirmedId}')" style="padding:7px 14px;border-radius:8px;border:1.5px solid var(--red);background:var(--red-bg);color:var(--red);font-family:inherit;font-size:12px;font-weight:700;cursor:pointer">No-Show</button>` : ''}
+            </div>
+          </div>`;
+        }).join('') : '<div class="mob-empty">No clients yet</div>'}</div>`
+      : `<table>
+        <thead><tr><th>#</th><th>Customer</th><th>Visits</th><th>Total Spent</th><th>Booked Via</th><th>Service Type</th><th>Top Service</th><th>First Visit</th><th>Last Visit</th><th>Actions</th></tr></thead>
+        <tbody>${clients.length ? clients.map((c, i) => {
+          const isNoShowOnly = c.visits === 0 && c.noshowCount > 0;
+          const topService = Object.entries(c.services).sort((a, b) => b[1] - a[1])[0];
+          const allServices = Object.entries(c.services).map(([s, n]) => n > 1 ? `${s} ×${n}` : s).join(', ');
+          const isRepeat = c.visits > 1;
+          const sourceLabel = c.onlineCount > 0 && c.manualCount > 0 ? 'Online + Phone' : c.onlineCount > 0 ? 'Online' : 'Phone / In-Person';
+          const sourceBadgeColor = c.onlineCount > 0 && c.manualCount === 0 ? 'var(--primary)' : c.manualCount > 0 && c.onlineCount === 0 ? 'var(--yellow)' : 'var(--green)';
+          const sourceBgColor = c.onlineCount > 0 && c.manualCount === 0 ? 'var(--primary-glow)' : c.manualCount > 0 && c.onlineCount === 0 ? 'var(--yellow-bg)' : 'var(--green-bg)';
+          const typeCell = c.mobileCount > 0 && c.inShopCount > 0
+            ? `<div style="display:flex;flex-direction:column;gap:3px"><span style="background:rgba(59,130,246,0.1);color:var(--primary);font-size:10px;font-weight:700;padding:2px 7px;border-radius:5px">📍 ${c.inShopCount}× In-Shop</span><span style="background:rgba(245,158,11,0.12);color:var(--yellow);font-size:10px;font-weight:700;padding:2px 7px;border-radius:5px">🚗 ${c.mobileCount}× Mobile</span></div>`
+            : c.mobileCount > 0 ? `<span style="background:rgba(245,158,11,0.12);color:var(--yellow);font-size:10px;font-weight:700;padding:3px 8px;border-radius:6px">🚗 Mobile</span>`
+            : `<span style="background:rgba(59,130,246,0.1);color:var(--primary);font-size:10px;font-weight:700;padding:3px 8px;border-radius:6px">📍 In-Shop</span>`;
+          return `<tr style="${isNoShowOnly ? 'opacity:0.65' : ''}">
+            <td style="color:var(--text3);font-size:12px">${i + 1}</td>
+            <td><div style="display:flex;align-items:center;gap:10px"><div style="width:34px;height:34px;border-radius:50%;background:${isNoShowOnly ? 'var(--red-bg)' : 'var(--bg4)'};display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:${isNoShowOnly ? 'var(--red)' : 'var(--text)'};flex-shrink:0">${c.name[0].toUpperCase()}</div><div><div style="font-weight:600;display:flex;align-items:center;gap:6px">${c.name}${isNoShowOnly ? ` <span style="background:rgba(239,68,68,0.12);color:var(--red);font-size:10px;font-weight:700;padding:2px 7px;border-radius:5px">NO SHOW</span>` : ''}</div><div style="font-size:11px;color:var(--text3)">${c.phone}</div></div></div></td>
+            <td>${isNoShowOnly ? `<span style="background:rgba(239,68,68,0.12);color:var(--red);font-size:10px;font-weight:700;padding:3px 8px;border-radius:6px">${c.noshowCount}× No-Show</span>` : `<div style="display:flex;align-items:center;gap:6px"><span style="font-weight:700;color:${isRepeat ? 'var(--primary)' : 'var(--text)'}">${c.visits}</span>${isRepeat ? `<span style="background:var(--primary-glow);color:var(--primary);font-size:10px;font-weight:700;padding:2px 7px;border-radius:5px;letter-spacing:0.05em">REPEAT</span>` : ''}</div>`}</td>
+            <td style="font-weight:700;color:${isNoShowOnly ? 'var(--text3)' : 'var(--green)'};font-size:15px">${isNoShowOnly ? '—' : '$' + c.totalSpent.toLocaleString()}</td>
+            <td>${isNoShowOnly ? '—' : `<span style="background:${sourceBgColor};color:${sourceBadgeColor};font-size:11px;font-weight:700;padding:3px 9px;border-radius:6px;letter-spacing:0.04em">${sourceLabel}</span>`}</td>
+            <td>${isNoShowOnly ? '—' : typeCell}</td>
+            <td><div style="font-size:13px;color:var(--text2)">${topService ? topService[0] : '—'}</div>${Object.keys(c.services).length > 1 ? `<div style="font-size:11px;color:var(--text3);margin-top:2px">${allServices}</div>` : ''}</td>
+            <td style="color:var(--text3);font-size:12px">${fmtDate(c.firstVisit)}</td>
+            <td style="color:${c.lastVisit === new Date().toISOString().split('T')[0] ? 'var(--green)' : 'var(--text3)'};font-size:12px">${fmtDate(c.lastVisit)}</td>
+            <td><div style="display:flex;flex-direction:column;gap:6px">
+              ${c.phone !== '—' ? `<button onclick="sendWinback('${c.phone}','${c.name.replace(/'/g,"\\'")}',this)" style="padding:5px 11px;border-radius:7px;border:1.5px solid var(--primary);background:var(--primary-glow);color:var(--primary);font-family:inherit;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap">📲 Win-Back</button>` : ''}
+              ${c.phone !== '—' ? `<button onclick="sendReview('${c.phone}','${c.name.replace(/'/g,"\\'")}',this)" style="padding:5px 11px;border-radius:7px;border:1.5px solid var(--yellow);background:var(--yellow-bg);color:var(--yellow);font-family:inherit;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap">⭐ Review</button>` : ''}
+              ${c.latestConfirmedId ? `<button onclick="markNoShow('${c.latestConfirmedId}')" style="padding:5px 11px;border-radius:7px;border:1.5px solid var(--red);background:var(--red-bg);color:var(--red);font-family:inherit;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap">No-Show</button>` : ''}
+            </div></td>
+          </tr>`;
+        }).join('') : '<tr><td colspan="10" style="text-align:center;color:var(--text3);padding:40px">No clients yet</td></tr>'}
+        </tbody></table>`}
     </div>`;
+}
+
+// ── Manual Entry ─────────────────────────────────────────────
+function renderManualEntry() {
+  const manualBookings = bookings.filter((b) => b.source === 'manual').slice(0, 30);
+  document.getElementById('main').innerHTML = `
+    <div class="page-hdr"><h1>Manual Entry</h1><p>Log bookings that happened over the phone or in person. They count toward your revenue and monthly stats, and trigger the review SMS automatically.</p></div>
+    <div class="form-card" style="margin-bottom:20px">
+      <h3 style="margin-bottom:16px">Log a booking</h3>
+      <div class="form-row" style="grid-template-columns:1fr 1fr 1fr 1fr auto">
+        <div class="field" style="margin:0"><label>Customer Name</label><input type="text" id="me-name" placeholder="Alex Johnson"/></div>
+        <div class="field" style="margin:0"><label>Phone (optional)</label><input type="tel" id="me-phone" placeholder="+1 (403) 555-0123"/></div>
+        <div class="field" style="margin:0"><label>Service</label><input type="text" id="me-service" placeholder="e.g. Edge Sharpening"/></div>
+        <div class="field" style="margin:0"><label>Price ($)</label><input type="number" id="me-price" placeholder="30" min="0"/></div>
+        <div class="field" style="margin:0;min-width:130px"><label>Date</label><input type="date" id="me-date" value="${new Date().toISOString().split('T')[0]}"/></div>
+      </div>
+      <div style="margin-top:12px;display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+        <div class="field" style="margin:0;min-width:200px"><label>Service Type</label>
+          <select id="me-type" onchange="toggleManualAddress()"><option value="inshop">📍 In-Shop</option><option value="mobile">🚗 Mobile</option></select>
+        </div>
+        <div class="field" style="margin:0;flex:1;min-width:200px;display:none" id="me-address-wrap"><label>Address (mobile)</label><input type="text" id="me-address" placeholder="e.g. 123 Main St SW"/></div>
+        <div class="field" style="margin:0;flex:1;min-width:200px"><label>Notes (optional)</label><input type="text" id="me-notes" placeholder="e.g. Paid cash"/></div>
+        <div class="field" style="margin:0;min-width:160px"><label>Review SMS Delay</label>
+          <select id="me-delay"><option value="-1">No review SMS</option><option value="0">Send immediately</option>${Array.from({ length: 24 }, (_, i) => `<option value="${(i + 1) * 60}"${i + 1 === 12 ? ' selected' : ''}>${i + 1} hour${i + 1 > 1 ? 's' : ''}</option>`).join('')}</select>
+        </div>
+        <button class="btn-sm" onclick="addManualEntry()" style="height:44px;margin-top:20px">Log Booking</button>
+      </div>
+      <div class="form-msg" id="me-msg"></div>
+      <p style="font-size:12px;color:var(--text3);margin-top:12px">Review SMS fires after the chosen delay. Requires a phone number.</p>
+    </div>
+    <div class="table-wrap">
+      <div class="table-head"><span class="table-head-title">Manually Logged Bookings</span></div>
+      ${window.innerWidth < 640
+        ? `<div class="mob-cards-wrap">${manualBookings.length ? manualBookings.map((b) => `<div class="mob-card">
+              <div class="mob-card-top"><div><div class="mob-card-name">${b.customerName}</div><div class="mob-card-sub">${b.phone || '—'}</div></div><span style="color:var(--green);font-weight:700;font-size:15px">$${b.servicePrice}</span></div>
+              <div class="mob-card-meta">${b.serviceName} · ${b.date}</div>
+              <div class="mob-card-actions"><span style="font-size:12px;color:var(--text3)">Review SMS:</span><span class="badge ${b.reviewSentAt ? 'badge-confirmed' : 'badge-pending'}">${b.reviewSentAt ? 'Sent' : '—'}</span></div>
+            </div>`).join('') : '<div class="mob-empty">No manual entries yet</div>'}</div>`
+        : `<table><thead><tr><th>Customer</th><th>Service</th><th>Price</th><th>Date</th><th>Review SMS</th></tr></thead>
+          <tbody>${manualBookings.length ? manualBookings.map((b) => `<tr>
+            <td><div style="font-weight:600">${b.customerName}</div><div style="font-size:11px;color:var(--text3)">${b.phone || '—'}</div></td>
+            <td style="color:var(--text2)">${b.serviceName}</td>
+            <td style="font-weight:700;color:var(--green)">$${b.servicePrice}</td>
+            <td style="color:var(--text3);font-size:12px">${b.date}</td>
+            <td><span class="badge ${b.reviewSentAt ? 'badge-confirmed' : 'badge-pending'}">${b.reviewSentAt ? 'Sent' : '—'}</span></td>
+          </tr>`).join('') : '<tr><td colspan="5" style="text-align:center;color:var(--text3);padding:40px">No manual entries yet</td></tr>'}
+          </tbody></table>`}
+    </div>`;
+}
+
+function toggleManualAddress() {
+  document.getElementById('me-address-wrap').style.display = document.getElementById('me-type').value === 'mobile' ? 'block' : 'none';
+}
+
+async function addManualEntry() {
+  const name = document.getElementById('me-name').value.trim();
+  const phone = document.getElementById('me-phone').value.trim();
+  const service = document.getElementById('me-service').value.trim();
+  const price = document.getElementById('me-price').value.trim();
+  const date = document.getElementById('me-date').value;
+  const notes = document.getElementById('me-notes').value.trim();
+  const delay = parseInt(document.getElementById('me-delay').value);
+  const serviceType = document.getElementById('me-type').value;
+  const address = document.getElementById('me-address').value.trim();
+  const msg = document.getElementById('me-msg');
+  if (!name || !service) { msg.className = 'form-msg fail'; msg.style.display = 'block'; msg.textContent = 'Name and service are required.'; return; }
+  if (serviceType === 'mobile' && !address) { msg.className = 'form-msg fail'; msg.style.display = 'block'; msg.textContent = 'Address is required for mobile.'; return; }
+  const btn = document.querySelector('[onclick="addManualEntry()"]');
+  btn.textContent = 'Logging...'; btn.disabled = true;
+  try {
+    const r = await fetch(API + '/api/manual-entry?password=' + encodeURIComponent(pwd), {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ customerName: name, phone, serviceName: service, servicePrice: price, date, notes, reviewDelayMinutes: delay, serviceType, address: serviceType === 'mobile' ? address : null }),
+    });
+    const d = await r.json();
+    if (d.success) {
+      msg.className = 'form-msg ok'; msg.style.display = 'block';
+      const smsNote = !phone ? 'No phone — SMS skipped.' : delay === -1 ? 'No review SMS will be sent.' : delay === 0 ? 'Review SMS sent immediately.' : `Review SMS scheduled in ${delay / 60} hour${delay / 60 > 1 ? 's' : ''}.`;
+      msg.textContent = '✓ Logged! ' + smsNote;
+      ['me-name','me-phone','me-service','me-price','me-notes','me-address'].forEach((id) => { document.getElementById(id).value = ''; });
+      document.getElementById('me-type').value = 'inshop';
+      document.getElementById('me-address-wrap').style.display = 'none';
+      bookings = await (await fetch(API + '/api/bookings?password=' + encodeURIComponent(pwd))).json();
+      stats = await (await fetch(API + '/api/stats?password=' + encodeURIComponent(pwd))).json();
+      renderManualEntry();
+    } else { msg.className = 'form-msg fail'; msg.style.display = 'block'; msg.textContent = d.error || 'Error.'; }
+  } catch (e) { msg.className = 'form-msg fail'; msg.style.display = 'block'; msg.textContent = 'Connection error.'; }
+  const btn2 = document.querySelector('[onclick="addManualEntry()"]');
+  if (btn2) { btn2.textContent = 'Log Booking'; btn2.disabled = false; }
+}
+
+async function markNoShow(id) {
+  if (!confirm('Mark this booking as a no-show? The review SMS will not be sent.')) return;
+  const r = await fetch(API + '/api/bookings/' + id + '/noshow?password=' + encodeURIComponent(pwd), { method: 'POST' });
+  const d = await r.json();
+  if (d.success) { bookings = await (await fetch(API + '/api/bookings?password=' + encodeURIComponent(pwd))).json(); showPage(currentPage); }
+  else { alert('Failed to mark as no-show.'); }
+}
+
+async function sendWinback(phone, name, btn) {
+  btn.textContent = 'Sending…'; btn.disabled = true;
+  const r = await fetch(API + '/api/winback?password=' + encodeURIComponent(pwd), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ phone, customerName: name }) });
+  const d = await r.json();
+  if (d.success) { btn.textContent = '✓ Sent!'; btn.style.borderColor = 'var(--green)'; btn.style.color = 'var(--green)'; btn.style.background = 'var(--green-bg)'; }
+  else { btn.textContent = 'Failed'; btn.disabled = false; }
+}
+
+async function sendReview(phone, name, btn) {
+  btn.textContent = 'Sending…'; btn.disabled = true;
+  const r = await fetch(API + '/api/send-review?password=' + encodeURIComponent(pwd), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ phone, customerName: name }) });
+  const d = await r.json();
+  if (d.success) { btn.textContent = '✓ Sent!'; btn.style.borderColor = 'var(--yellow)'; btn.style.color = 'var(--yellow)'; btn.style.background = 'var(--yellow-bg)'; }
+  else { btn.textContent = 'Failed'; btn.disabled = false; }
+}
+
+async function addTip(id, btn) {
+  const raw = prompt('Enter tip amount ($):');
+  if (raw === null) return;
+  const amount = parseFloat(raw);
+  if (!amount || amount <= 0 || isNaN(amount)) { alert('Enter a valid amount.'); return; }
+  btn.textContent = 'Saving…'; btn.disabled = true;
+  try {
+    const r = await fetch(API + '/api/bookings/' + id + '/tip?password=' + encodeURIComponent(pwd), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ amount }) });
+    const d = await r.json();
+    if (d.success) {
+      bookings = await (await fetch(API + '/api/bookings?password=' + encodeURIComponent(pwd))).json();
+      stats = await (await fetch(API + '/api/stats?password=' + encodeURIComponent(pwd))).json();
+      renderBookings();
+    } else { alert('Failed to save tip.'); btn.textContent = 'Add Tip'; btn.disabled = false; }
+  } catch (e) { alert('Connection error.'); btn.textContent = 'Add Tip'; btn.disabled = false; }
 }
 
 // ── Walk-ins ─────────────────────────────────────────────────
 function renderWalkins() {
-  const mob = window.innerWidth < 640;
-  const listContent = mob
-    ? `<div class="mob-cards-wrap">${walkins.length ? walkins.map((w) => `<div class="mob-card">
-          <div class="mob-card-name">${w.customerName}</div>
-          <div class="mob-card-sub">${w.phone}</div>
-          <div class="mob-card-meta">${w.serviceName}<br>${new Date(w.createdAt).toLocaleDateString()}<br>${w.reviewSentAt ? '<span class="badge badge-confirmed">Review sent</span>' : '<span class="badge badge-pending">Pending</span>'}</div>
-        </div>`).join('') : '<div class="mob-empty">No walk-ins logged yet</div>'}</div>`
-    : `<table>
-        <thead><tr><th>Customer</th><th>Service</th><th>Added</th><th>Review SMS</th></tr></thead>
-        <tbody>${walkins.length ? walkins.map((w) => `<tr>
-          <td style="font-weight:600">${w.customerName}</td>
-          <td style="color:var(--text2)">${w.serviceName}</td>
-          <td style="color:var(--text3)">${new Date(w.createdAt).toLocaleDateString()}</td>
-          <td>${w.reviewSentAt ? '<span class="badge badge-confirmed">Sent</span>' : '<span class="badge badge-pending">Pending</span>'}</td>
-        </tr>`).join('') : '<tr><td colspan="4" style="text-align:center;color:var(--text3);padding:40px">No walk-ins logged yet</td></tr>'}
-        </tbody>
-      </table>`;
-
   document.getElementById('main').innerHTML = `
-    <div class="page-hdr"><h1>Walk-ins</h1><p>Customers added manually for review follow-up</p></div>
+    <div class="page-hdr"><h1>Walk-ins</h1><p>Customers added manually for review follow-up (not counted as bookings — use Manual Entry to log revenue)</p></div>
     <div class="form-card">
       <h3>Add a walk-in</h3>
-      <p>They'll get a review-request text 24 hours after being added.</p>
+      <p>They'll automatically receive a review SMS 24 hours after you add them.</p>
       <div class="form-row">
-        <div class="field"><label>Name</label><input type="text" id="wk-name" placeholder="Customer name"/></div>
-        <div class="field"><label>Phone</label><input type="tel" id="wk-phone" placeholder="(403) 555-0123"/></div>
+        <div class="field"><label>Customer Name</label><input type="text" id="wk-name" placeholder="Alex Johnson"/></div>
+        <div class="field"><label>Phone Number</label><input type="tel" id="wk-phone" placeholder="+1 (403) 555-0123"/></div>
         <div class="field"><label>Service</label><input type="text" id="wk-service" placeholder="e.g. Edge Sharpening"/></div>
-        <button class="btn-sm" onclick="addWalkin()">Add</button>
+        <button class="btn-sm" onclick="addWalkin()">Add + Schedule SMS</button>
       </div>
       <div class="form-msg" id="wk-msg"></div>
     </div>
     <div class="table-wrap">
-      <div class="table-head"><span class="table-head-title">All Walk-ins</span></div>
-      ${listContent}
+      <div class="table-head"><span class="table-head-title">Walk-in Customers</span></div>
+      ${window.innerWidth < 640 ? `<div id="wk-tbody">${renderWalkinRows()}</div>` : `<table><thead><tr><th>Customer</th><th>Service</th><th>Added</th><th>Review SMS</th></tr></thead><tbody id="wk-tbody">${renderWalkinRows()}</tbody></table>`}
     </div>`;
+}
+
+function renderWalkinRows() {
+  const mob = window.innerWidth < 640;
+  if (!walkins.length) return mob ? '<div class="mob-empty">No walk-ins yet</div>' : '<tr><td colspan="4" style="text-align:center;color:var(--text3);padding:40px">No walk-ins yet</td></tr>';
+  if (mob) return '<div class="mob-cards-wrap">' + walkins.map((w) => `<div class="mob-card">
+      <div class="mob-card-top"><div><div class="mob-card-name">${w.customerName}</div><div class="mob-card-sub">${w.phone}</div></div><span class="badge ${w.reviewSentAt ? 'badge-confirmed' : 'badge-pending'}">${w.reviewSentAt ? 'Sent' : 'Scheduled'}</span></div>
+      <div class="mob-card-meta">${w.serviceName} · Added ${new Date(w.createdAt).toLocaleDateString()}</div>
+    </div>`).join('') + '</div>';
+  return walkins.map((w) => `<tr>
+    <td><div style="font-weight:600">${w.customerName}</div><div style="font-size:11px;color:var(--text3)">${w.phone}</div></td>
+    <td style="color:var(--text2)">${w.serviceName}</td>
+    <td style="color:var(--text3);font-size:12px">${new Date(w.createdAt).toLocaleDateString()}</td>
+    <td><span class="badge ${w.reviewSentAt ? 'badge-confirmed' : 'badge-pending'}">${w.reviewSentAt ? 'Sent' : 'Scheduled'}</span></td>
+  </tr>`).join('');
 }
 
 async function addWalkin() {
@@ -563,17 +943,146 @@ async function addWalkin() {
   const phone = document.getElementById('wk-phone').value.trim();
   const service = document.getElementById('wk-service').value.trim();
   const msg = document.getElementById('wk-msg');
-  if (!name || !phone) { msg.className = 'form-msg fail'; msg.textContent = 'Name and phone required.'; msg.style.display = 'block'; return; }
+  if (!name || !phone) { msg.className = 'form-msg fail'; msg.style.display = 'block'; msg.textContent = 'Name and phone are required.'; return; }
+  const btn = document.querySelector('.btn-sm');
+  btn.textContent = 'Adding...'; btn.disabled = true;
   try {
     const r = await fetch(API + '/api/walkins', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ customerName: name, phone, serviceName: service }) });
-    const data = await r.json();
-    if (data.success) {
-      msg.className = 'form-msg ok'; msg.textContent = 'Walk-in added.'; msg.style.display = 'block';
-      const wr = await fetch(API + '/api/walkins?password=' + encodeURIComponent(pwd));
-      walkins = await wr.json();
-      renderWalkins();
-    } else { msg.className = 'form-msg fail'; msg.textContent = data.error || 'Failed to add.'; msg.style.display = 'block'; }
-  } catch (e) { msg.className = 'form-msg fail'; msg.textContent = 'Connection error.'; msg.style.display = 'block'; }
+    const d = await r.json();
+    if (d.success) {
+      msg.className = 'form-msg ok'; msg.style.display = 'block'; msg.textContent = '✓ Added! Review SMS scheduled for 24 hours from now.';
+      document.getElementById('wk-name').value = ''; document.getElementById('wk-phone').value = ''; document.getElementById('wk-service').value = '';
+      walkins = await (await fetch(API + '/api/walkins?password=' + encodeURIComponent(pwd))).json();
+      document.getElementById('wk-tbody').innerHTML = renderWalkinRows();
+    } else { msg.className = 'form-msg fail'; msg.style.display = 'block'; msg.textContent = d.error || 'Error.'; }
+  } catch (e) { msg.className = 'form-msg fail'; msg.style.display = 'block'; msg.textContent = 'Connection error.'; }
+  btn.textContent = 'Add + Schedule SMS'; btn.disabled = false;
+}
+
+// ── Block Times ──────────────────────────────────────────────
+function renderAvailability() {
+  const today = new Date().toISOString().split('T')[0];
+  document.getElementById('main').innerHTML = `
+    <div class="page-hdr"><h1>Block Times</h1><p>Mark dates or time slots as unavailable — applies across all locations and mobile.</p></div>
+    <div class="form-card" style="margin-bottom:20px">
+      <h3 style="margin-bottom:4px">Block a single day</h3>
+      <p style="font-size:13px;color:var(--text2);margin-bottom:16px">No one will be able to book any slots on that date.</p>
+      <div style="display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap">
+        <div class="field" style="margin:0;flex:1;min-width:180px"><label>Date</label><input type="date" id="single-day-date" min="${today}"/></div>
+        <button class="btn-sm" onclick="blockSingleDay()" style="height:44px">Block Day</button>
+      </div>
+      <div class="form-msg" id="single-day-msg"></div>
+    </div>
+    <div class="form-card" style="margin-bottom:20px">
+      <h3 style="margin-bottom:4px">Block a range of days</h3>
+      <p style="font-size:13px;color:var(--text2);margin-bottom:16px">e.g. a vacation or holiday week.</p>
+      <div style="display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap">
+        <div class="field" style="margin:0;flex:1;min-width:140px"><label>From</label><input type="date" id="days-range-start" min="${today}"/></div>
+        <div class="field" style="margin:0;flex:1;min-width:140px"><label>To</label><input type="date" id="days-range-end" min="${today}"/></div>
+        <button class="btn-sm" onclick="blockDaysRange()" style="height:44px">Block Days</button>
+      </div>
+      <div class="form-msg" id="days-range-msg"></div>
+    </div>
+    <div class="form-card" style="margin-bottom:20px">
+      <h3 style="margin-bottom:4px">Block a time range</h3>
+      <p style="font-size:13px;color:var(--text2);margin-bottom:16px">e.g. 3:00 PM to 7:00 PM on a single day.</p>
+      <div style="display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap">
+        <div class="field" style="margin:0;flex:1;min-width:140px"><label>Date</label><input type="date" id="range-date" min="${today}"/></div>
+        <div class="field" style="margin:0;min-width:110px"><label>From</label><input type="time" id="range-start" step="1800"/></div>
+        <div class="field" style="margin:0;min-width:110px"><label>To</label><input type="time" id="range-end" step="1800"/></div>
+        <button class="btn-sm" onclick="blockRange()" style="height:44px">Block Range</button>
+      </div>
+      <div class="form-msg" id="range-msg"></div>
+    </div>
+    <div class="form-card" style="margin-bottom:20px">
+      <h3 style="margin-bottom:16px">Manage individual slots</h3>
+      <div style="display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap">
+        <div class="field" style="margin:0;flex:1;min-width:180px"><label>Date</label><input type="date" id="block-date" min="${today}"/></div>
+        <div class="field" style="margin:0;min-width:180px"><label>Location</label><select id="block-location"><option value="location-a">Location A</option><option value="location-b">Test Location</option><option value="mobile">Mobile</option></select></div>
+        <button class="btn-sm" onclick="loadBlockDate()" style="height:44px">Load Slots →</button>
+      </div>
+    </div>
+    <div id="block-slots-area"></div>`;
+}
+
+async function blockSingleDay() {
+  const date = document.getElementById('single-day-date').value;
+  const msg = document.getElementById('single-day-msg');
+  if (!date) { msg.className = 'form-msg fail'; msg.style.display = 'block'; msg.textContent = 'Pick a date first.'; return; }
+  const r = await fetch(API + '/api/blocked?password=' + encodeURIComponent(pwd), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ date }) });
+  const d = await r.json();
+  if (d.success) { msg.className = 'form-msg ok'; msg.style.display = 'block'; msg.textContent = `✓ ${new Date(date + 'T12:00:00').toLocaleDateString('en-CA', { weekday: 'long', month: 'long', day: 'numeric' })} is now fully blocked.`; document.getElementById('single-day-date').value = ''; }
+  else { msg.className = 'form-msg fail'; msg.style.display = 'block'; msg.textContent = 'Error — try again.'; }
+}
+
+async function blockDaysRange() {
+  const start = document.getElementById('days-range-start').value;
+  const end = document.getElementById('days-range-end').value;
+  const msg = document.getElementById('days-range-msg');
+  if (!start || !end) { msg.className = 'form-msg fail'; msg.style.display = 'block'; msg.textContent = 'Pick both dates.'; return; }
+  if (start > end) { msg.className = 'form-msg fail'; msg.style.display = 'block'; msg.textContent = '"From" must be before or same as "To".'; return; }
+  const dates = []; const cur = new Date(start + 'T12:00:00'); const last = new Date(end + 'T12:00:00');
+  while (cur <= last) { dates.push(cur.toISOString().split('T')[0]); cur.setDate(cur.getDate() + 1); }
+  msg.className = 'form-msg ok'; msg.style.display = 'block'; msg.textContent = `Blocking ${dates.length} day(s)...`;
+  let ok = 0;
+  for (const date of dates) { try { await fetch(API + '/api/blocked?password=' + encodeURIComponent(pwd), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ date }) }); ok++; } catch (e) {} }
+  msg.textContent = `✓ Blocked ${ok} day(s): ${new Date(start + 'T12:00:00').toLocaleDateString('en-CA', { month: 'short', day: 'numeric' })} – ${new Date(end + 'T12:00:00').toLocaleDateString('en-CA', { month: 'short', day: 'numeric' })}.`;
+  document.getElementById('days-range-start').value = ''; document.getElementById('days-range-end').value = '';
+}
+
+async function blockRange() {
+  const date = document.getElementById('range-date').value;
+  const start = document.getElementById('range-start').value;
+  const end = document.getElementById('range-end').value;
+  const msg = document.getElementById('range-msg');
+  if (!date || !start || !end) { msg.className = 'form-msg fail'; msg.style.display = 'block'; msg.textContent = 'Fill in all three fields.'; return; }
+  if (start >= end) { msg.className = 'form-msg fail'; msg.style.display = 'block'; msg.textContent = '"From" must be before "To".'; return; }
+  const r = await fetch(API + '/api/blocked/range?password=' + encodeURIComponent(pwd), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ date, startTime: start, endTime: end }) });
+  const d = await r.json();
+  if (d.success) { msg.className = 'form-msg ok'; msg.style.display = 'block'; msg.textContent = `✓ Blocked all slots from ${formatTime12(start)} to ${formatTime12(end)} on ${new Date(date + 'T12:00:00').toLocaleDateString('en-CA', { month: 'short', day: 'numeric' })}.`; document.getElementById('range-date').value = ''; document.getElementById('range-start').value = ''; document.getElementById('range-end').value = ''; }
+  else { msg.className = 'form-msg fail'; msg.style.display = 'block'; msg.textContent = 'Error — try again.'; }
+}
+
+async function loadBlockDate() {
+  const date = document.getElementById('block-date').value;
+  const location = document.getElementById('block-location').value;
+  if (!date) return;
+  const area = document.getElementById('block-slots-area');
+  area.innerHTML = `<div style="color:var(--text3);padding:20px">Loading...</div>`;
+  const [slotsRes, blockedRes] = await Promise.all([
+    fetch(API + '/api/availability?date=' + date + '&location=' + encodeURIComponent(location)),
+    fetch(API + '/api/blocked?password=' + encodeURIComponent(pwd)),
+  ]);
+  const slotsData = await slotsRes.json();
+  const blockedAll = await blockedRes.json();
+  const dayBlocked = blockedAll.some((b) => b.date === date && !b.time);
+  const allSlots = slotsData.slots || [];
+  area.innerHTML = `
+    <div class="form-card">
+      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:20px">
+        <div><div style="font-weight:700;font-size:15px">${new Date(date + 'T12:00:00').toLocaleDateString('en-CA', { weekday: 'long', month: 'long', day: 'numeric' })}</div><div style="font-size:12px;color:var(--text3);margin-top:3px">${dayBlocked ? 'Entire day is blocked' : allSlots.length + ' time slots'}</div></div>
+        <button onclick="toggleDay('${date}', ${dayBlocked})" style="padding:10px 18px;border-radius:10px;border:1.5px solid ${dayBlocked ? 'var(--green)' : 'var(--red)'};background:${dayBlocked ? 'var(--green-bg)' : 'var(--red-bg)'};color:${dayBlocked ? 'var(--green)' : 'var(--red)'};font-family:inherit;font-size:13px;font-weight:700;cursor:pointer">${dayBlocked ? '✓ Unblock Entire Day' : '✕ Block Entire Day'}</button>
+      </div>
+      ${dayBlocked ? `<p style="color:var(--text3);font-size:13px">Unblock the day to manage individual slots.</p>` : allSlots.length === 0 ? `<p style="color:var(--text3);font-size:13px">No available slots for this day based on your configured hours.</p>` : `
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:10px">
+        ${allSlots.map((s) => {
+          const isBlocked = s.status === 'blocked';
+          const isBooked = s.status === 'booked';
+          return `<button onclick="${isBooked ? '' : `toggleSlot('${date}','${s.time}',${isBlocked})`}" style="padding:12px 8px;border-radius:10px;border:1.5px solid ${isBooked ? 'var(--border)' : isBlocked ? 'var(--red)' : 'var(--green)'};background:${isBooked ? 'var(--bg3)' : isBlocked ? 'var(--red-bg)' : 'var(--green-bg)'};color:${isBooked ? 'var(--text3)' : isBlocked ? 'var(--red)' : 'var(--green)'};font-family:inherit;font-size:13px;font-weight:600;cursor:${isBooked ? 'default' : 'pointer'};text-align:center"><div>${formatTime12(s.time)}</div><div style="font-size:10px;margin-top:3px;text-transform:uppercase;letter-spacing:0.05em">${isBooked ? 'Booked' : isBlocked ? 'Blocked' : 'Open'}</div></button>`;
+        }).join('')}
+      </div>`}
+    </div>`;
+}
+
+function formatTime12(t) { const [h, m] = t.split(':'); const hr = parseInt(h); return `${hr > 12 ? hr - 12 : hr || 12}:${m} ${hr >= 12 ? 'PM' : 'AM'}`; }
+
+async function toggleDay(date, isBlocked) {
+  await fetch(API + '/api/blocked?password=' + encodeURIComponent(pwd), { method: isBlocked ? 'DELETE' : 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ date }) });
+  loadBlockDate();
+}
+async function toggleSlot(date, time, isBlocked) {
+  await fetch(API + '/api/blocked?password=' + encodeURIComponent(pwd), { method: isBlocked ? 'DELETE' : 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ date, time }) });
+  loadBlockDate();
 }
 
 // ── Reviews ──────────────────────────────────────────────────
@@ -581,46 +1090,105 @@ function renderReviews() {
   const starBar = (r) => '★'.repeat(r) + '☆'.repeat(5 - r);
   const starColor = (r) => r >= 4 ? 'var(--green)' : r === 3 ? 'var(--yellow)' : 'var(--red)';
   const fmtTs = (iso) => { const d = new Date(iso); return `${MONTHS[d.getMonth()]} ${d.getDate()}, ${d.getFullYear()}`; };
-
-  const cards = feedback.length
-    ? feedback.map((f) => `<div style="background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);padding:20px 24px;display:flex;flex-direction:column;gap:8px">
-        <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">
-          <div style="display:flex;align-items:center;gap:10px">
-            <div style="width:36px;height:36px;border-radius:50%;background:var(--bg4);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:var(--text)">${(f.customerName || '?')[0].toUpperCase()}</div>
-            <div>
-              <div style="font-weight:600;font-size:14px">${f.customerName || 'Customer'}</div>
-              <div style="font-size:11px;color:var(--text3)">${f.serviceName || ''}</div>
-            </div>
-          </div>
-          <div style="display:flex;align-items:center;gap:10px">
-            <span style="color:${starColor(f.rating)};font-size:15px;letter-spacing:1px">${starBar(f.rating)}</span>
-            <span style="font-size:11px;color:var(--text3)">${fmtTs(f.submittedAt)}</span>
-            ${f.rating >= 4
-              ? `<span style="background:var(--green-bg);color:var(--green);font-size:10px;font-weight:700;padding:3px 8px;border-radius:6px;letter-spacing:0.05em">→ GOOGLE</span>`
-              : `<span style="background:var(--red-bg);color:var(--red);font-size:10px;font-weight:700;padding:3px 8px;border-radius:6px;letter-spacing:0.05em">PRIVATE</span>`}
-          </div>
+  const cards = feedback.length ? feedback.map((f) => `<div style="background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);padding:20px 24px;display:flex;flex-direction:column;gap:8px">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">
+        <div style="display:flex;align-items:center;gap:10px">
+          <div style="width:36px;height:36px;border-radius:50%;background:var(--bg4);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:var(--text)">${(f.customerName || '?')[0].toUpperCase()}</div>
+          <div><div style="font-weight:600;font-size:14px">${f.customerName || 'Customer'}</div><div style="font-size:11px;color:var(--text3)">${f.serviceName || ''}</div></div>
         </div>
-        ${f.comment ? `<p style="font-size:13px;color:var(--text2);line-height:1.6;margin-top:4px;padding-top:12px;border-top:1px solid var(--border)">"${f.comment}"</p>` : ''}
-      </div>`).join('')
-    : `<div style="text-align:center;color:var(--text3);padding:60px 20px;background:var(--bg3);border-radius:var(--radius)">No reviews yet — they'll appear here after customers submit feedback.</div>`;
+        <div style="display:flex;align-items:center;gap:10px">
+          <span style="color:${starColor(f.rating)};font-size:15px;letter-spacing:1px">${starBar(f.rating)}</span>
+          <span style="font-size:11px;color:var(--text3)">${fmtTs(f.submittedAt)}</span>
+          ${f.rating >= 4 ? `<span style="background:var(--green-bg);color:var(--green);font-size:10px;font-weight:700;padding:3px 8px;border-radius:6px;letter-spacing:0.05em">→ GOOGLE</span>` : `<span style="background:var(--red-bg);color:var(--red);font-size:10px;font-weight:700;padding:3px 8px;border-radius:6px;letter-spacing:0.05em">PRIVATE</span>`}
+        </div>
+      </div>
+      ${f.comment ? `<p style="font-size:13px;color:var(--text2);line-height:1.6;margin-top:4px;padding-top:12px;border-top:1px solid var(--border)">"${f.comment}"</p>` : ''}
+    </div>`).join('') : `<div style="text-align:center;color:var(--text3);padding:60px 20px;background:var(--bg3);border-radius:var(--radius)">No reviews yet — they'll appear here after customers submit feedback.</div>`;
 
   document.getElementById('main').innerHTML = `
     <div class="page-hdr"><h1>Reviews</h1><p>Automated follow-up performance</p></div>
     <div class="stats-row" style="grid-template-columns:repeat(3,1fr)">
       <div class="stat-card yellow"><div class="stat-lbl">Avg Rating</div><div class="stat-num yellow">${stats.avgRating || '—'}</div><div class="stat-sub">From review system</div></div>
-      <div class="stat-card blue"><div class="stat-lbl">Review Rate</div><div class="stat-num blue">${stats.reviewRate || 0}%</div><div class="stat-sub">Industry average ~8%</div></div>
+      <div class="stat-card blue"><div class="stat-lbl">Review Rate</div><div class="stat-num blue">${stats.reviewRate}%</div><div class="stat-sub">Industry average ~8%</div></div>
       <div class="stat-card green"><div class="stat-lbl">Total Reviews</div><div class="stat-num green">${feedback.length}</div><div class="stat-sub">SMS fires 24h after appointment</div></div>
     </div>
     <div class="form-card" style="margin-bottom:20px">
       <h3>How the review funnel works</h3>
       <p style="margin-bottom:12px">Every booking and walk-in automatically triggers a review SMS 24 hours after the appointment. 4–5 stars redirects to Google, 1–3 stars stays private here.</p>
       <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center">
-        ${[['1', 'Appointment done'], ['→', ''], ['2', 'SMS fires +24h'], ['→', ''], ['4-5★', '→ Google review'], ['→', ''], ['1-3★', '→ Private feedback']].map(([l, t]) =>
-          t ? `<div style="background:var(--bg3);border-radius:10px;padding:12px 16px"><div style="font-size:18px;font-weight:800;color:var(--text)">${l}</div><div style="font-size:11px;color:var(--text3);margin-top:3px">${t}</div></div>`
-            : `<div style="color:var(--text3);font-size:18px">${l}</div>`).join('')}
+        ${[['1', 'Appointment done'], ['→', ''], ['2', 'SMS fires +24h'], ['→', ''], ['4-5★', '→ Google review'], ['→', ''], ['1-3★', '→ Private feedback']].map(([l, t]) => t ? `<div style="background:var(--bg3);border-radius:10px;padding:12px 16px"><div style="font-size:18px;font-weight:800;color:var(--text)">${l}</div><div style="font-size:11px;color:var(--text3);margin-top:3px">${t}</div></div>` : `<div style="color:var(--text3);font-size:18px">${l}</div>`).join('')}
       </div>
     </div>
     <div style="display:flex;flex-direction:column;gap:12px">${cards}</div>`;
+}
+
+// ── Expenses ─────────────────────────────────────────────────
+function renderExpenses() {
+  const totalExp = expenses.reduce((s, e) => s + (Number(e.amount) || 0), 0);
+  const byCategory = {};
+  expenses.forEach((e) => { byCategory[e.category] = (byCategory[e.category] || 0) + (Number(e.amount) || 0); });
+  const catBadgeColor = (c) => ({ 'Supplies': 'var(--primary)', 'Equipment': 'var(--green)', 'Vehicle / Fuel': 'var(--yellow)', 'Marketing': 'rgba(168,85,247,1)', 'Software': 'var(--primary)', 'Labor': 'var(--green)' }[c] || 'var(--text2)');
+  const catBadgeBg = (c) => ({ 'Supplies': 'var(--primary-glow)', 'Equipment': 'var(--green-bg)', 'Vehicle / Fuel': 'var(--yellow-bg)', 'Marketing': 'rgba(168,85,247,0.12)', 'Software': 'var(--primary-glow)', 'Labor': 'var(--green-bg)' }[c] || 'var(--bg3)');
+
+  document.getElementById('main').innerHTML = `
+    <div class="page-hdr"><h1>Expenses</h1><p>Log business costs to calculate true profit</p></div>
+    <div class="form-card" style="margin-bottom:20px">
+      <h3 style="margin-bottom:16px">Log an expense</h3>
+      <div style="display:grid;grid-template-columns:2fr 1fr 1fr 1fr auto;gap:12px;align-items:end;flex-wrap:wrap" id="ex-form-row">
+        <div class="field" style="margin:0"><label>Description</label><input type="text" id="ex-desc" placeholder="e.g. Wax and supplies"/></div>
+        <div class="field" style="margin:0"><label>Category</label><select id="ex-cat"><option>Supplies</option><option>Equipment</option><option>Vehicle / Fuel</option><option>Marketing</option><option>Software</option><option>Labor</option><option>Other</option></select></div>
+        <div class="field" style="margin:0"><label>Amount ($)</label><input type="number" id="ex-amount" placeholder="49.99" min="0" step="0.01"/></div>
+        <div class="field" style="margin:0"><label>Date</label><input type="date" id="ex-date" value="${new Date().toISOString().split('T')[0]}"/></div>
+        <button class="btn-sm" onclick="addExpense()" style="height:44px;margin-top:20px">Add</button>
+      </div>
+      <div class="form-msg" id="ex-msg"></div>
+    </div>
+    ${Object.keys(byCategory).length ? `<div class="stats-row" style="margin-bottom:20px">${Object.entries(byCategory).sort((a, b) => b[1] - a[1]).slice(0, 4).map(([cat, amt]) => `<div class="stat-card blue"><div class="stat-lbl">${cat}</div><div class="stat-num" style="color:${catBadgeColor(cat)}">$${amt.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})}</div><div class="stat-sub">${expenses.filter((e) => e.category === cat).length} expense${expenses.filter((e) => e.category === cat).length !== 1 ? 's' : ''}</div></div>`).join('')}</div>` : ''}
+    <div class="table-wrap">
+      <div class="table-head"><span class="table-head-title">All Expenses</span><span style="font-size:13px;color:var(--red);font-weight:700">Total: $${totalExp.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})}</span></div>
+      ${window.innerWidth < 640
+        ? `<div class="mob-cards-wrap">${expenses.length ? expenses.map((e) => `<div class="mob-card">
+              <div class="mob-card-top"><div><div class="mob-card-name">${e.description}</div><div class="mob-card-sub">${e.date}</div></div><span style="color:var(--red);font-weight:700;font-size:16px">$${Number(e.amount).toFixed(2)}</span></div>
+              <div class="mob-card-actions"><span style="background:${catBadgeBg(e.category)};color:${catBadgeColor(e.category)};font-size:11px;font-weight:700;padding:4px 10px;border-radius:6px">${e.category}</span><button onclick="deleteExpense('${e.id}')" style="padding:6px 12px;border-radius:8px;border:1.5px solid var(--red);background:var(--red-bg);color:var(--red);font-family:inherit;font-size:12px;font-weight:700;cursor:pointer">Delete</button></div>
+            </div>`).join('') : '<div class="mob-empty">No expenses logged yet</div>'}</div>`
+        : `<table><thead><tr><th>Date</th><th>Description</th><th>Category</th><th>Amount</th><th></th></tr></thead>
+          <tbody>${expenses.length ? expenses.map((e) => `<tr>
+            <td style="color:var(--text3);font-size:12px">${e.date}</td>
+            <td style="font-weight:600">${e.description}</td>
+            <td><span style="background:${catBadgeBg(e.category)};color:${catBadgeColor(e.category)};font-size:10px;font-weight:700;padding:3px 9px;border-radius:6px;letter-spacing:0.04em">${e.category}</span></td>
+            <td style="font-weight:700;color:var(--red)">$${Number(e.amount).toFixed(2)}</td>
+            <td><button onclick="deleteExpense('${e.id}')" style="padding:4px 10px;border-radius:6px;border:1.5px solid var(--red);background:var(--red-bg);color:var(--red);font-family:inherit;font-size:11px;font-weight:700;cursor:pointer">Delete</button></td>
+          </tr>`).join('') : '<tr><td colspan="5" style="text-align:center;color:var(--text3);padding:40px">No expenses logged yet</td></tr>'}
+          </tbody></table>`}
+    </div>`;
+}
+
+async function addExpense() {
+  const desc = document.getElementById('ex-desc').value.trim();
+  const cat = document.getElementById('ex-cat').value;
+  const amount = document.getElementById('ex-amount').value;
+  const date = document.getElementById('ex-date').value;
+  const msg = document.getElementById('ex-msg');
+  if (!desc || !amount) { msg.className = 'form-msg fail'; msg.style.display = 'block'; msg.textContent = 'Description and amount required.'; return; }
+  const btn = document.querySelector('[onclick="addExpense()"]');
+  btn.textContent = 'Adding…'; btn.disabled = true;
+  try {
+    const r = await fetch(API + '/api/expenses?password=' + encodeURIComponent(pwd), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ description: desc, category: cat, amount, date }) });
+    const d = await r.json();
+    if (d.success) {
+      expenses = await (await fetch(API + '/api/expenses?password=' + encodeURIComponent(pwd))).json();
+      stats = await (await fetch(API + '/api/stats?password=' + encodeURIComponent(pwd))).json();
+      renderExpenses();
+    } else { msg.className = 'form-msg fail'; msg.style.display = 'block'; msg.textContent = 'Error saving expense.'; btn.textContent = 'Add'; btn.disabled = false; }
+  } catch (e) { msg.className = 'form-msg fail'; msg.style.display = 'block'; msg.textContent = 'Connection error. Try again.'; btn.textContent = 'Add'; btn.disabled = false; }
+}
+
+async function deleteExpense(id) {
+  if (!confirm('Delete this expense?')) return;
+  await fetch(API + '/api/expenses/' + id + '?password=' + encodeURIComponent(pwd), { method: 'DELETE' });
+  expenses = await (await fetch(API + '/api/expenses?password=' + encodeURIComponent(pwd))).json();
+  stats = await (await fetch(API + '/api/stats?password=' + encodeURIComponent(pwd))).json();
+  renderExpenses();
 }
 
 // ── Danger Zone ──────────────────────────────────────────────
@@ -629,7 +1197,7 @@ function renderDanger() {
     <div class="page-hdr"><h1>Danger Zone</h1><p>Irreversible actions — use with care</p></div>
     <div class="form-card" style="border-color:var(--red)">
       <h3 style="color:var(--red)">Wipe all data</h3>
-      <p>Permanently deletes every booking, walk-in, and review. This cannot be undone. Type <strong>DELETE</strong> below to confirm.</p>
+      <p>Permanently deletes every booking, walk-in, review, expense, and blocked date. This cannot be undone. Type <strong>DELETE</strong> below to confirm.</p>
       <div class="form-row" style="grid-template-columns:1fr auto">
         <div class="field"><label>Confirm</label><input type="text" id="wipe-confirm" placeholder="Type DELETE"/></div>
         <button class="btn-sm" style="background:var(--red)" onclick="wipeData()">Wipe All Data</button>
@@ -646,7 +1214,7 @@ async function wipeData() {
     const r = await fetch(API + '/api/wipe-data?password=' + encodeURIComponent(pwd), { method: 'POST' });
     const data = await r.json();
     if (data.success) {
-      bookings = []; walkins = []; feedback = [];
+      bookings = []; walkins = []; feedback = []; expenses = [];
       msg.className = 'form-msg ok'; msg.textContent = 'All data wiped.'; msg.style.display = 'block';
       setTimeout(() => showPage('overview', document.querySelector('.nav-item')), 800);
     } else { msg.className = 'form-msg fail'; msg.textContent = data.error || 'Failed.'; msg.style.display = 'block'; }
@@ -654,11 +1222,15 @@ async function wipeData() {
 }
 
 function logout() {
+  API_RESET();
   document.getElementById('app').style.display = 'none';
   document.getElementById('login').style.display = 'flex';
   document.getElementById('pwd').value = '';
-  pwd = ''; bookings = []; walkins = []; feedback = []; stats = null;
+  document.getElementById('err').style.display = 'none';
+  document.getElementById('login-btn').textContent = 'Access Dashboard';
+  document.getElementById('login-btn').disabled = false;
 }
+function API_RESET() { pwd = ''; stats = null; bookings = []; walkins = []; feedback = []; expenses = []; }
 </script>
 </body>
 </html>
