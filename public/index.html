@@ -289,7 +289,12 @@ body{background:var(--bg);color:var(--ink);font-family:'Plus Jakarta Sans',sans-
 </div>
 </div>
 <script>
-const API = window.location.origin;
+// skidocyyc.ca/book is a proxy (not a redirect), so window.location.origin
+// stays "skidocyyc.ca" even though this page is served from Render — fall
+// back to the real backend URL whenever we're not on the Render domain itself.
+const API = /\bonrender\.com$/.test(location.hostname) || location.hostname === 'localhost'
+  ? window.location.origin
+  : 'https://skidoc-booking-eblt.onrender.com';
 let services = [], mobileSurcharge = 10, locations = [];
 let calMo = new Date(); calMo.setDate(1);
 
