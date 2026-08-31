@@ -39,11 +39,31 @@ function formatTime(t) {
   return `${hr > 12 ? hr - 12 : hr || 12}:${m} ${hr >= 12 ? 'PM' : 'AM'}`;
 }
 
+// Calgary wall-clock "now" as a naive Date, so comparisons against naive
+// date/time strings (which are always Calgary-local) stay correct regardless
+// of the server's own timezone (Render runs UTC) and DST.
+function getCalgaryNow() {
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'America/Edmonton', hour12: false,
+    year: 'numeric', month: '2-digit', day: '2-digit',
+    hour: '2-digit', minute: '2-digit', second: '2-digit',
+  }).formatToParts(new Date());
+  const get = (t) => parts.find((p) => p.type === t).value;
+  return new Date(`${get('year')}-${get('month')}-${get('day')}T${get('hour')}:${get('minute')}:${get('second')}`);
+}
+
+function locationLabel(location, address) {
+  if (location === 'mobile') return `Mobile — ${address}`;
+  const loc = LOCATIONS.find((l) => l.id === location);
+  return loc ? loc.name : location;
+}
+
 // SMS to owner — approve or deny request
 async function sendOwnerRequest(booking) {
   if (!twilioClient || !OWNER_PHONE) { console.log(`[SMS SKIPPED] Owner request`); return; }
+  const where = locationLabel(booking.location, booking.address);
   await twilioClient.messages.create({
-    body: `New booking request!\n${booking.customerName} wants ${booking.serviceName}\n${booking.date} at ${formatTime(booking.time)}\nPhone: ${booking.phone}\n\nReply YES to confirm or NO to decline.`,
+    body: `New booking request!\n${booking.customerName} wants ${booking.serviceName}\n${booking.equipment ? `Equipment: ${booking.equipment}\n` : ''}Where: ${where}\n${booking.date} at ${formatTime(booking.time)}\nPhone: ${booking.phone}\n\nReply YES to confirm or NO to decline.`,
     from: TWILIO_PHONE_NUMBER,
     to: OWNER_PHONE,
   });
@@ -52,8 +72,9 @@ async function sendOwnerRequest(booking) {
 // SMS to customer — booking confirmed
 async function sendCustomerConfirmation(booking) {
   if (!twilioClient) { console.log(`[SMS SKIPPED] Confirmation for ${booking.customerName}`); return; }
+  const where = locationLabel(booking.location, booking.address);
   await twilioClient.messages.create({
-    body: `Hi ${booking.customerName}! Your booking is confirmed at ${BUSINESS_NAME}. ${booking.serviceName} on ${booking.date} at ${formatTime(booking.time)}. See you then!`,
+    body: `Hi ${booking.customerName}! Your booking is confirmed at ${BUSINESS_NAME}. ${booking.serviceName} on ${booking.date} at ${formatTime(booking.time)} — ${where}. See you then!`,
     from: TWILIO_PHONE_NUMBER,
     to: booking.phone,
   });
@@ -96,75 +117,125 @@ async function sendReviewSMS(booking) {
 }
 
 const SERVICES = [
-  { id: "ski-tuneup-wax", name: "Ski Tuneup & Wax", description: "Full base grind, edge work, and hot wax — everything your skis need for a great day on the hill", duration: 90, price: 65, category: "ski" },
-  { id: "edge-sharpening", name: "Edge Sharpening", description: "Precision side and base edge bevel sharpening to your spec — crisp, confident edges every run", duration: 45, price: 35, category: "ski" },
-  { id: "snowboard-tuneup", name: "Snowboard Tuneup", description: "Base repair, edge sharpening, and hot wax for your board — ride smoother, hit harder", duration: 90, price: 60, category: "snowboard" },
+  { id: "performance-race-tune", name: "Performance Race Tune", price: 85, category: "package", description: "Full ceramic disc edge sharpening finished to an extra-fine edge, hand-ironed race wax, base and side edges set to the perfect angle." },
+  { id: "seasonal-tune", name: "Seasonal Tune", price: 70, category: "package", description: "Ceramic disc edge sharpening, hand-ironed wax, stone base grind, and base repairs included." },
+  { id: "maintenance-tune", name: "Maintenance Tune", price: 60, category: "package", description: "Ceramic disc edge sharpening, an infrared hot wax, and minor base repairs." },
+  { id: "waxing-sharpening", name: "Waxing & Sharpening", price: 55, category: "single", description: "Infrared hot base wax and ceramic disc edge sharpening to keep your gear in shape." },
+  { id: "infrared-hot-wax", name: "Infrared Hot Wax", price: 25, category: "single", description: "A simple maintenance wax to keep your gear smooth and gliding." },
+  { id: "hand-iron-wax", name: "Hand Iron Wax", price: 35, category: "single", description: "Full hand waxing, ironed and melted into the base for the best possible finish." },
+  { id: "ceramic-disc-edge-sharpening", name: "Ceramic Disc Edge Sharpening", price: 30, category: "single", description: "Done with a spinning ceramic disc to keep your edges clean, sharp, and in the best condition." },
+  { id: "ptex-base-repair", name: "P-Tex Base Repair", price: 15, category: "single", fromPrice: true, description: "Repairs base damage and core shots to protect your gear and extend its life." },
+  { id: "binding-adjustment", name: "Binding Adjustment", price: 15, category: "single", fromPrice: true, description: "Professional adjustment for proper fit, function, and safe release." },
 ];
 
-app.get("/api/services", (req, res) => res.json(SERVICES));
+const MOBILE_SURCHARGE = 10;
 
-app.get("/api/availability", (req, res) => {
-  const { date } = req.query;
-  if (!date) return res.status(400).json({ error: "date required" });
+const LOCATIONS = [
+  { id: "location-a", name: "Location A", address: "26 Val Gardena View SW, Calgary, AB T3H 5Z5" },
+  { id: "location-b", name: "Test Location", address: "Patina Dr SW, Calgary, AB" },
+];
 
+app.get("/api/services", (req, res) => res.json({ services: SERVICES, mobileSurcharge: MOBILE_SURCHARGE }));
+app.get("/api/locations", (req, res) => res.json(LOCATIONS));
+
+// Shared slot-window rules: weekdays are one window, Sat/Sun another;
+// mobile uses 2-hour increments, in-shop locations use 30-minute increments.
+function getWindow(dayOfWeek, isMobile) {
+  const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
+  if (isMobile) {
+    return isWeekend
+      ? { startMin: 10 * 60, endMin: 22 * 60, stepMin: 120 }  // 10 AM–10 PM
+      : { startMin: 17 * 60, endMin: 21 * 60, stepMin: 120 }; // 5, 7, 9 PM
+  }
+  return isWeekend
+    ? { startMin: 10 * 60, endMin: 22 * 60, stepMin: 30 }  // 10 AM–10 PM
+    : { startMin: 17 * 60, endMin: 23 * 60, stepMin: 30 }; // 5 PM–11 PM
+}
+
+function isValidLocation(location) {
+  return location === "mobile" || LOCATIONS.some((l) => l.id === location);
+}
+
+// Returns [{time, status}] for a date+location, applying the 1-hour advance cutoff.
+function computeSlots(date, location) {
   const [year, month, day] = date.split('-').map(Number);
-  const dayOfWeek = new Date(year, month - 1, day).getDay(); // local date, no timezone shift
+  const dayOfWeek = new Date(year, month - 1, day).getDay();
+  const isMobile = location === "mobile";
+  const { startMin, endMin, stepMin } = getWindow(dayOfWeek, isMobile);
 
-  // Determine start hour based on day
-  let startH;
-  if (dayOfWeek === 5) startH = 15;        // Friday: 3 PM
-  else if (dayOfWeek === 0 || dayOfWeek === 6) startH = 11; // Sat/Sun: 11 AM
-  else startH = 17;                          // Mon–Thu: 5 PM
-  const endH = 23; // all days end at 11 PM
-
-  const now = new Date();
-  const oneHourFromNow = new Date(now.getTime() + 60 * 60 * 1000);
-  const todayStr = now.toISOString().split('T')[0];
+  const calNow = getCalgaryNow();
+  const oneHourFromNow = new Date(calNow.getTime() + 60 * 60 * 1000);
+  const todayStr = `${calNow.getFullYear()}-${String(calNow.getMonth() + 1).padStart(2, '0')}-${String(calNow.getDate()).padStart(2, '0')}`;
 
   const booked = db.get("bookings")
-    .filter(b => b.date === date && b.status !== "cancelled" && b.status !== "denied")
-    .map(b => b.time)
+    .filter((b) => b.date === date && b.location === location && b.status !== "cancelled" && b.status !== "denied")
+    .map((b) => b.time)
     .value();
 
   const slots = [];
-  for (let h = startH; h <= endH; h++) {
-    for (let m of [0, 30]) {
-      if (h === endH && m === 30) continue;
-      const timeStr = String(h).padStart(2, '0') + ':' + String(m).padStart(2, '0');
-      if (date === todayStr) {
-        const slotTime = new Date(date + 'T' + timeStr + ':00');
-        if (slotTime < oneHourFromNow) continue;
-      }
-      slots.push({
-        time: timeStr,
-        status: booked.includes(timeStr) ? 'booked' : 'available'
-      });
+  for (let mins = startMin; mins <= endMin; mins += stepMin) {
+    const h = Math.floor(mins / 60), m = mins % 60;
+    const timeStr = String(h).padStart(2, '0') + ':' + String(m).padStart(2, '0');
+    if (date === todayStr) {
+      const slotTime = new Date(`${date}T${timeStr}:00`);
+      if (slotTime < oneHourFromNow) continue;
     }
+    slots.push({ time: timeStr, status: booked.includes(timeStr) ? 'booked' : 'available' });
   }
+  return slots;
+}
 
-  res.json({ date, slots });
+app.get("/api/availability", (req, res) => {
+  const { date, location } = req.query;
+  if (!date || !location) return res.status(400).json({ error: "date and location required" });
+  if (!isValidLocation(location)) return res.status(400).json({ error: "invalid location" });
+  res.json({ date, location, slots: computeSlots(date, location) });
 });
 
 app.post("/api/bookings", async (req, res) => {
-  const { serviceId, serviceName, servicePrice, date, time, customerName, email, notes } = req.body;
+  const { equipment, location, address, items, date, time, customerName, email, notes } = req.body;
   let phone = (req.body.phone || "").toString().replace(/[^0-9+]/g, "");
   if (phone.length === 10) phone = "+1" + phone;
   else if (phone.length === 11 && phone[0] === "1") phone = "+" + phone;
   else if (phone.length > 0 && !phone.startsWith("+")) phone = "+" + phone;
-  if (!serviceId || !date || !time || !customerName || !phone)
+
+  if (!equipment || !["ski", "snowboard"].includes(equipment))
+    return res.status(400).json({ error: "Select ski or snowboard" });
+  if (!location || !isValidLocation(location))
+    return res.status(400).json({ error: "Select a valid location" });
+  const isMobile = location === "mobile";
+  if (isMobile && !(address || "").trim())
+    return res.status(400).json({ error: "Address is required for mobile service" });
+  if (!Array.isArray(items) || !items.length)
+    return res.status(400).json({ error: "Select at least one service" });
+  if (!date || !time || !customerName || !phone)
     return res.status(400).json({ error: "Missing required fields" });
 
-  const service = { id: serviceId, name: serviceName || serviceId, price: Number(servicePrice) || 0 };
+  // Resolve services & prices server-side — never trust client-submitted prices.
+  const resolvedItems = [];
+  for (const it of items) {
+    const svc = SERVICES.find((s) => s.id === it.serviceId);
+    if (!svc) return res.status(400).json({ error: `Unknown service: ${it.serviceId}` });
+    const qty = Math.max(1, Math.min(10, Number(it.qty) || 1));
+    const unitPrice = svc.price + (isMobile ? MOBILE_SURCHARGE : 0);
+    resolvedItems.push({ serviceId: svc.id, serviceName: svc.name, unitPrice, qty });
+  }
+  const totalPrice = resolvedItems.reduce((sum, i) => sum + i.unitPrice * i.qty, 0);
 
-  const taken = db.get("bookings")
-    .find(b => b.date === date && b.time === time && b.status !== "cancelled" && b.status !== "denied")
-    .value();
-  if (taken) return res.status(409).json({ error: "Slot already booked" });
+  // The requested slot must actually be one we currently offer (window + not already past cutoff).
+  const offeredSlot = computeSlots(date, location).find((s) => s.time === time);
+  if (!offeredSlot) return res.status(400).json({ error: "That time is no longer available" });
+  if (offeredSlot.status === "booked") return res.status(409).json({ error: "Slot already booked" });
 
   const booking = {
     id: `SKI-${Date.now()}`,
     shortId: generateShortId(),
-    serviceId, serviceName: service.name, servicePrice: service.price,
+    equipment,
+    location,
+    address: isMobile ? address.trim() : null,
+    items: resolvedItems,
+    serviceName: resolvedItems.map((i) => `${i.serviceName}${i.qty > 1 ? ` x${i.qty}` : ''}`).join(', '),
+    servicePrice: totalPrice,
     date, time, customerName, phone,
     email: email || null, notes: notes || null,
     status: "pending",
@@ -172,9 +243,10 @@ app.post("/api/bookings", async (req, res) => {
     reviewSentAt: null,
     createdAt: new Date().toISOString(),
   };
+  booking.locationName = locationLabel(booking.location, booking.address);
 
   db.get("bookings").push(booking).write();
-  console.log(`✓ Booking request: ${booking.id} (${booking.shortId}) — ${customerName} for ${service.name} on ${date} at ${time}`);
+  console.log(`✓ Booking request: ${booking.id} (${booking.shortId}) — ${customerName} for ${booking.serviceName} on ${date} at ${time} @ ${booking.locationName}`);
 
   try { await sendOwnerRequest(booking); console.log(`✓ Owner request sent → ${OWNER_PHONE}`); }
   catch (err) { console.error(`✗ Owner request failed:`, err.message); }
@@ -182,7 +254,11 @@ app.post("/api/bookings", async (req, res) => {
   res.json({
     success: true,
     bookingId: booking.id,
-    booking: { id: booking.id, serviceName: booking.serviceName, date, time, price: booking.servicePrice, customerName },
+    booking: {
+      id: booking.id, serviceName: booking.serviceName, date, time,
+      price: booking.servicePrice, customerName,
+      locationName: booking.locationName, address: booking.address,
+    },
   });
 });
 
@@ -261,6 +337,7 @@ app.post("/api/sms-webhook", async (req, res) => {
       if (body === "YES") {
         const taken = db.get("bookings")
           .find(b => b.date === offerBooking.suggestedDate && b.time === offerBooking.suggestedTime
+            && b.location === offerBooking.location
             && b.status !== "cancelled" && b.status !== "denied" && b.id !== offerBooking.id)
           .value();
         if (taken) {

@@ -166,16 +166,17 @@ function renderBookings(){
     <div class="page-title">All Bookings</div>
     <p class="page-sub">${bookings.length} total</p>
     <div class="table-card"><table>
-      <thead><tr><th>ID</th><th>Customer</th><th>Service</th><th>Date</th><th>Time</th><th>Price</th><th>Status</th></tr></thead>
+      <thead><tr><th>ID</th><th>Customer</th><th>Service</th><th>Location</th><th>Date</th><th>Time</th><th>Price</th><th>Status</th></tr></thead>
       <tbody>${bookings.length?bookings.map(b=>`<tr>
         <td style="font-family:monospace;font-size:11px;color:var(--ink3)">${b.id}</td>
         <td><div style="font-weight:600">${b.customerName}</div><div style="font-size:11px;color:var(--ink3)">${b.phone}</div></td>
         <td>${b.serviceName}</td>
+        <td>${b.address?'Mobile':(b.locationName||'—')}${b.address?`<div style="font-size:11px;color:var(--ink3)">${b.address}</div>`:''}</td>
         <td style="color:var(--ink3)">${b.date}</td>
         <td style="color:var(--ink3)">${b.time}</td>
         <td style="font-weight:600;color:var(--ice)">$${b.servicePrice}</td>
         <td><span class="badge badge-${b.status}">${b.status}</span></td>
-      </tr>`).join(''):'<tr><td colspan="7" style="text-align:center;color:var(--ink3);padding:40px">No bookings yet</td></tr>'}</tbody>
+      </tr>`).join(''):'<tr><td colspan="8" style="text-align:center;color:var(--ink3);padding:40px">No bookings yet</td></tr>'}</tbody>
     </table></div>`;
 }
 function renderReviews(){
