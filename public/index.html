@@ -645,6 +645,9 @@ async function confirmBooking() {
 }
 
 function showDone(b) {
+  clearTimeout(customerCheckTimer);
+  welcomeBackName = null;
+  document.getElementById('welcome-back').style.display = 'none';
   const months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
   const parts = b.date.split('-');
   const longDate = months[parseInt(parts[1]) - 1] + ' ' + parseInt(parts[2]) + ', ' + parts[0];
@@ -671,6 +674,9 @@ function reset() {
   state.name = ''; state.phone = ''; state.email = '';
   state.location = null; state.address = ''; state.cart = {}; state.date = null; state.time = null;
   ['inp-name','inp-phone','inp-email','inp-notes'].forEach((id) => { const el = document.getElementById(id); if (el) el.value = ''; });
+  clearTimeout(customerCheckTimer);
+  welcomeBackName = null;
+  document.getElementById('welcome-back').style.display = 'none';
   document.getElementById('conf-txt').textContent = 'Confirm Booking';
   document.getElementById('btn-2').disabled = true;
   document.getElementById('btn-1').disabled = true;
