@@ -166,6 +166,22 @@ app.get("/api/locations", (req, res) => res.json(getLocations()));
 app.get("/api/info", (req, res) => res.json({ businessName: bizName() }));
 app.get("/api/site-config", (req, res) => res.json(getConfig()));
 
+// Returning-customer check for the booking form's "welcome back" greeting.
+// Matches on name + phone against past bookings and walk-ins.
+app.get("/api/customer-check", (req, res) => {
+  const rawName = (req.query.name || "").toString().trim();
+  let phone = (req.query.phone || "").toString().replace(/[^0-9+]/g, "");
+  if (phone.length === 10) phone = "+1" + phone;
+  else if (phone.length === 11 && phone[0] === "1") phone = "+" + phone;
+  else if (phone.length > 0 && !phone.startsWith("+")) phone = "+" + phone;
+  if (!rawName || !phone) return res.json({ recognized: false });
+
+  const nameLower = rawName.toLowerCase();
+  const match = [...db.get("bookings").value(), ...db.get("walkins").value()]
+    .find((c) => c.phone === phone && (c.customerName || "").trim().toLowerCase() === nameLower);
+  res.json({ recognized: !!match, name: match ? match.customerName : null });
+});
+
 app.put("/api/site-config", (req, res) => {
   if (req.query.password !== ADMIN_PASSWORD) return res.status(401).json({ error: "Unauthorized" });
   const current = getConfig();

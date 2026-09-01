@@ -127,6 +127,8 @@ body{background:var(--bg);color:var(--ink);font-family:'Plus Jakarta Sans',sans-
 .field input::placeholder,.field textarea::placeholder{color:#b0c4de}
 .field textarea{resize:none;min-height:82px}
 .field input.err{border-color:var(--red);background:var(--red-light)}
+.welcome-back{margin-top:16px;padding:12px 16px;border-radius:10px;background:var(--green-light);color:var(--green);font-size:14px;font-weight:600;display:flex;align-items:center;gap:8px;animation:wb-in 0.2s ease}
+@keyframes wb-in{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:translateY(0)}}
 
 .btn-row{display:flex;gap:10px;align-items:center;margin-top:32px}
 .btn-back{font-size:13px;font-weight:600;color:var(--ink3);background:var(--white);border:1.5px solid var(--rule);border-radius:10px;padding:12px 18px;cursor:pointer;transition:all 0.13s;font-family:'Plus Jakarta Sans',sans-serif;white-space:nowrap}
@@ -220,10 +222,11 @@ body{background:var(--bg);color:var(--ink);font-family:'Plus Jakarta Sans',sans-
     <div class="p-title">Your details.</div>
     <p class="p-sub">Just enough for us to confirm your booking.</p>
     <div class="form-grid">
-      <div class="field"><label>Full Name *</label><input type="text" id="inp-name" placeholder="Alex Johnson" autocomplete="name"/></div>
-      <div class="field"><label>Phone Number *</label><input type="tel" id="inp-phone" placeholder="+1 (403) 555-0123" autocomplete="tel" inputmode="tel"/></div>
+      <div class="field"><label>Full Name *</label><input type="text" id="inp-name" placeholder="Alex Johnson" autocomplete="name" oninput="queueCustomerCheck()"/></div>
+      <div class="field"><label>Phone Number *</label><input type="tel" id="inp-phone" placeholder="+1 (403) 555-0123" autocomplete="tel" inputmode="tel" oninput="queueCustomerCheck()"/></div>
       <div class="field form-full"><label>Email Address</label><input type="email" id="inp-email" placeholder="alex@email.com (optional)" autocomplete="email"/></div>
     </div>
+    <div id="welcome-back" class="welcome-back" style="display:none"></div>
     <div class="btn-row">
       <button class="btn-back" onclick="goStep(2)">← Back</button>
       <button class="btn-prime" id="btn-3" onclick="continueFromDetails()">Continue →</button>
@@ -437,6 +440,37 @@ function changeQty(id, delta) {
   renderSvcs();
   updateSum();
   document.getElementById('btn-2').disabled = Object.keys(state.cart).length === 0;
+}
+
+let customerCheckTimer = null;
+let welcomeBackName = null;
+
+function queueCustomerCheck() {
+  clearTimeout(customerCheckTimer);
+  const name = document.getElementById('inp-name').value.trim();
+  const phone = document.getElementById('inp-phone').value.trim();
+  const box = document.getElementById('welcome-back');
+  if (welcomeBackName && (name.toLowerCase() !== welcomeBackName)) {
+    welcomeBackName = null;
+    box.style.display = 'none';
+  }
+  if (name.length < 3 || phone.replace(/[^0-9]/g, '').length < 10) return;
+  customerCheckTimer = setTimeout(() => checkReturningCustomer(name, phone), 500);
+}
+
+async function checkReturningCustomer(name, phone) {
+  try {
+    const r = await fetch(API + '/api/customer-check?name=' + encodeURIComponent(name) + '&phone=' + encodeURIComponent(phone));
+    const data = await r.json();
+    const box = document.getElementById('welcome-back');
+    if (data.recognized && data.name) {
+      welcomeBackName = name.toLowerCase();
+      box.innerHTML = '👋 Welcome back, ' + data.name.split(' ')[0] + '!';
+      box.style.display = 'flex';
+    } else {
+      box.style.display = 'none';
+    }
+  } catch (e) {}
 }
 
 function continueFromDetails() {
