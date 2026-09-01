@@ -277,7 +277,7 @@ body{background:var(--bg);color:var(--ink);font-family:'Plus Jakarta Sans',sans-
 const API = /\bonrender\.com$/.test(location.hostname) || location.hostname === 'localhost'
   ? window.location.origin
   : 'https://skidoc-booking-eblt.onrender.com';
-let services = [], mobileSurcharge = 10, locations = [];
+let services = [], mobileSurcharge = 10, mobileEnabled = true, locations = [];
 let calMo = new Date(); calMo.setDate(1);
 
 const state = {
@@ -291,8 +291,9 @@ async function loadServices() {
   try {
     const r = await fetch(API + '/api/services');
     const data = await r.json();
-    services = data.services; mobileSurcharge = data.mobileSurcharge;
+    services = data.services; mobileSurcharge = data.mobileSurcharge; mobileEnabled = data.mobileEnabled !== false;
     renderSvcs();
+    renderLocations(); // mobileEnabled may have just changed — re-render the location cards
   } catch (e) {
     document.getElementById('svc-list').innerHTML = '<p style="color:var(--ink3)">Could not load services — please refresh.</p>';
   }
@@ -323,22 +324,29 @@ function renderLocations() {
       <button type="button" class="map-btn" onclick="event.stopPropagation();openDirections('${loc.address.replace(/'/g, "\\'")}')">📍 How far is this?</button>
     </div>`;
   });
-  const mobSel = state.location === 'mobile' ? ' sel' : '';
-  html += `<div class="loc-card${mobSel}" id="loc-mobile" onclick="pickLocation('mobile')">
-    <div class="loc-top">
-      <div>
-        <div class="loc-name">🚐 Mobile — we come to you</div>
-        <div class="loc-addr">A small transportation fee applies (+$${mobileSurcharge} per service)</div>
+  if (mobileEnabled) {
+    const mobSel = state.location === 'mobile' ? ' sel' : '';
+    html += `<div class="loc-card${mobSel}" id="loc-mobile" onclick="pickLocation('mobile')">
+      <div class="loc-top">
+        <div>
+          <div class="loc-name">🚐 Mobile — we come to you</div>
+          <div class="loc-addr">A small transportation fee applies (+$${mobileSurcharge} per service)</div>
+        </div>
+        <div class="loc-radio"></div>
       </div>
-      <div class="loc-radio"></div>
-    </div>
-    <div class="mobile-addr-wrap" id="mobile-addr-wrap" style="display:none" onclick="event.stopPropagation()">
-      <div class="field"><label>Your Address *</label><input type="text" id="inp-address" placeholder="123 Example St SW, Calgary, AB" oninput="state.address=this.value.trim();validateLocationStep();"/></div>
-    </div>
-  </div>`;
+      <div class="mobile-addr-wrap" id="mobile-addr-wrap" style="display:none" onclick="event.stopPropagation()">
+        <div class="field"><label>Your Address *</label><input type="text" id="inp-address" placeholder="123 Example St SW, Calgary, AB" oninput="state.address=this.value.trim();validateLocationStep();"/></div>
+      </div>
+    </div>`;
+  } else if (state.location === 'mobile') {
+    state.location = null; state.address = ''; // mobile just got disabled out from under a selection
+  }
   document.getElementById('loc-grid').innerHTML = html;
-  document.getElementById('mobile-addr-wrap').style.display = state.location === 'mobile' ? 'block' : 'none';
-  if (state.location === 'mobile') document.getElementById('inp-address').value = state.address;
+  const addrWrap = document.getElementById('mobile-addr-wrap');
+  if (addrWrap) {
+    addrWrap.style.display = state.location === 'mobile' ? 'block' : 'none';
+    if (state.location === 'mobile') document.getElementById('inp-address').value = state.address;
+  }
 }
 
 function pickLocation(id) {

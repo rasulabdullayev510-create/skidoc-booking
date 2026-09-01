@@ -17,7 +17,52 @@ app.use(express.static(path.join(__dirname, "public")));
 
 const adapter = new FileSync("db.json");
 const db = low(adapter);
-db.defaults({ bookings: [], feedback: [], walkins: [], expenses: [], blocked: [], pageViews: [] }).write();
+db.defaults({
+  bookings: [], feedback: [], walkins: [], expenses: [], blocked: [], pageViews: [],
+  siteConfig: {
+    businessName: "Ski Doc Calgary",
+    phone: "(825) 521-2075",
+    email: "skidocyyc@gmail.com",
+    socials: {
+      instagram: "https://www.instagram.com/skidocyyc",
+      facebook: "https://www.facebook.com/profile.php?id=61582680415253",
+      google: "https://share.google/zg5XRvdmsyLY3mBix",
+    },
+    hero: {
+      headline: "Trust Your Turn",
+      subtitle: "Fast, affordable, and expert ski & snowboard tuning to keep your gear in peak condition.",
+    },
+    mobilePage: {
+      headline: "Your Ski Shop On Wheels",
+      description: "Sit back and bring the shop to your location with the click of a button. No waiting in line, no round trip, no wasted time — same precision tuning, wherever you are in Calgary.",
+    },
+    kidsDiscountText: "🧒 Kids' equipment discounts apply — just ask when you book.",
+    mobileEnabled: true,
+    mobileSurcharge: 10,
+    locations: [
+      { id: "location-a", name: "Location A", address: "26 Val Gardena View SW, Calgary, AB T3H 5Z5" },
+      { id: "location-b", name: "Test Location", address: "Patina Dr SW, Calgary, AB" },
+    ],
+    services: [
+      { id: "performance-race-tune", name: "Performance Race Tune", price: 85, category: "package", description: "Full ceramic disc edge sharpening finished to an extra-fine edge, hand-ironed race wax, base and side edges set to the perfect angle." },
+      { id: "seasonal-tune", name: "Seasonal Tune", price: 70, category: "package", description: "Ceramic disc edge sharpening, hand-ironed wax, stone base grind, and base repairs included." },
+      { id: "maintenance-tune", name: "Maintenance Tune", price: 60, category: "package", description: "Ceramic disc edge sharpening, an infrared hot wax, and minor base repairs." },
+      { id: "waxing-sharpening", name: "Waxing & Sharpening", price: 55, category: "single", description: "Infrared hot base wax and ceramic disc edge sharpening to keep your gear in shape." },
+      { id: "infrared-hot-wax", name: "Infrared Hot Wax", price: 25, category: "single", description: "A simple maintenance wax to keep your gear smooth and gliding." },
+      { id: "hand-iron-wax", name: "Hand Iron Wax", price: 35, category: "single", description: "Full hand waxing, ironed and melted into the base for the best possible finish." },
+      { id: "ceramic-disc-edge-sharpening", name: "Ceramic Disc Edge Sharpening", price: 30, category: "single", description: "Done with a spinning ceramic disc to keep your edges clean, sharp, and in the best condition." },
+      { id: "ptex-base-repair", name: "P-Tex Base Repair", price: 15, category: "single", fromPrice: true, description: "Repairs base damage and core shots to protect your gear and extend its life." },
+      { id: "binding-adjustment", name: "Binding Adjustment", price: 15, category: "single", fromPrice: true, description: "Professional adjustment for proper fit, function, and safe release." },
+    ],
+  },
+}).write();
+
+function getConfig() { return db.get("siteConfig").value(); }
+function getServices() { return getConfig().services; }
+function getLocations() { return getConfig().locations; }
+function getMobileSurcharge() { return getConfig().mobileSurcharge; }
+function isMobileEnabled() { return getConfig().mobileEnabled !== false; }
+function bizName() { return getConfig().businessName || BUSINESS_NAME; }
 
 const {
   TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_PHONE_NUMBER,
@@ -54,7 +99,7 @@ function getCalgaryNow() {
 
 function locationLabel(location, address) {
   if (location === 'mobile') return `Mobile — ${address}`;
-  const loc = LOCATIONS.find((l) => l.id === location);
+  const loc = getLocations().find((l) => l.id === location);
   return loc ? loc.name : location;
 }
 
@@ -74,7 +119,7 @@ async function sendCustomerConfirmation(booking) {
   if (!twilioClient) { console.log(`[SMS SKIPPED] Confirmation for ${booking.customerName}`); return; }
   const where = locationLabel(booking.location, booking.address);
   await twilioClient.messages.create({
-    body: `Hi ${booking.customerName}! Your booking is confirmed at ${BUSINESS_NAME}. ${booking.serviceName} on ${booking.date} at ${formatTime(booking.time)} — ${where}. See you then!`,
+    body: `Hi ${booking.customerName}! Your booking is confirmed at ${bizName()}. ${booking.serviceName} on ${booking.date} at ${formatTime(booking.time)} — ${where}. See you then!`,
     from: TWILIO_PHONE_NUMBER,
     to: booking.phone,
   });
@@ -91,7 +136,7 @@ async function sendCustomerConfirmation(booking) {
 async function sendCustomerDenied(booking) {
   if (!twilioClient) { console.log(`[SMS SKIPPED] Denial for ${booking.customerName}`); return; }
   await twilioClient.messages.create({
-    body: `Hi ${booking.customerName}, unfortunately that time is no longer available at ${BUSINESS_NAME}. Please choose another time: https://skidocyyc.ca/book`,
+    body: `Hi ${booking.customerName}, unfortunately that time is no longer available at ${bizName()}. Please choose another time: https://skidocyyc.ca/book`,
     from: TWILIO_PHONE_NUMBER,
     to: booking.phone,
   });
@@ -110,7 +155,7 @@ async function sendCustomerOffer(booking, suggestedDate, suggestedTime) {
 async function sendReviewSMS(booking) {
   if (!twilioClient) { console.log(`[SMS SKIPPED] Review for ${booking.customerName}`); return; }
   await twilioClient.messages.create({
-    body: `Hi ${booking.customerName}! How was your experience at ${BUSINESS_NAME}? Takes 20 seconds: ${getSurveyUrl(booking.reviewToken)}`,
+    body: `Hi ${booking.customerName}! How was your experience at ${bizName()}? Takes 20 seconds: ${getSurveyUrl(booking.reviewToken)}`,
     from: TWILIO_PHONE_NUMBER,
     to: booking.phone,
   });
@@ -126,28 +171,76 @@ async function sendWinbackSMS(phone, name) {
   });
 }
 
-const SERVICES = [
-  { id: "performance-race-tune", name: "Performance Race Tune", price: 85, category: "package", description: "Full ceramic disc edge sharpening finished to an extra-fine edge, hand-ironed race wax, base and side edges set to the perfect angle." },
-  { id: "seasonal-tune", name: "Seasonal Tune", price: 70, category: "package", description: "Ceramic disc edge sharpening, hand-ironed wax, stone base grind, and base repairs included." },
-  { id: "maintenance-tune", name: "Maintenance Tune", price: 60, category: "package", description: "Ceramic disc edge sharpening, an infrared hot wax, and minor base repairs." },
-  { id: "waxing-sharpening", name: "Waxing & Sharpening", price: 55, category: "single", description: "Infrared hot base wax and ceramic disc edge sharpening to keep your gear in shape." },
-  { id: "infrared-hot-wax", name: "Infrared Hot Wax", price: 25, category: "single", description: "A simple maintenance wax to keep your gear smooth and gliding." },
-  { id: "hand-iron-wax", name: "Hand Iron Wax", price: 35, category: "single", description: "Full hand waxing, ironed and melted into the base for the best possible finish." },
-  { id: "ceramic-disc-edge-sharpening", name: "Ceramic Disc Edge Sharpening", price: 30, category: "single", description: "Done with a spinning ceramic disc to keep your edges clean, sharp, and in the best condition." },
-  { id: "ptex-base-repair", name: "P-Tex Base Repair", price: 15, category: "single", fromPrice: true, description: "Repairs base damage and core shots to protect your gear and extend its life." },
-  { id: "binding-adjustment", name: "Binding Adjustment", price: 15, category: "single", fromPrice: true, description: "Professional adjustment for proper fit, function, and safe release." },
-];
+app.get("/api/services", (req, res) => res.json({ services: getServices(), mobileSurcharge: getMobileSurcharge(), mobileEnabled: isMobileEnabled() }));
+app.get("/api/locations", (req, res) => res.json(getLocations()));
+app.get("/api/info", (req, res) => res.json({ businessName: bizName() }));
+app.get("/api/site-config", (req, res) => res.json(getConfig()));
 
-const MOBILE_SURCHARGE = 10;
+app.put("/api/site-config", (req, res) => {
+  if (req.query.password !== ADMIN_PASSWORD) return res.status(401).json({ error: "Unauthorized" });
+  const current = getConfig();
+  const updated = { ...current, ...req.body };
+  // Nested objects merge field-by-field so a partial update doesn't wipe siblings.
+  ["hero", "socials", "mobilePage"].forEach((k) => {
+    if (req.body[k]) updated[k] = { ...current[k], ...req.body[k] };
+  });
+  db.set("siteConfig", updated).write();
+  console.log(`✓ Site config updated by admin`);
+  res.json({ success: true, siteConfig: updated });
+});
 
-const LOCATIONS = [
-  { id: "location-a", name: "Location A", address: "26 Val Gardena View SW, Calgary, AB T3H 5Z5" },
-  { id: "location-b", name: "Test Location", address: "Patina Dr SW, Calgary, AB" },
-];
+// AI assistant — scoped strictly to proposing edits to siteConfig. It never
+// applies anything itself; it returns a proposed patch for the admin to
+// review and confirm (which then goes through the normal PUT above).
+const { ANTHROPIC_API_KEY, ANTHROPIC_MODEL = "claude-sonnet-5" } = process.env;
 
-app.get("/api/services", (req, res) => res.json({ services: SERVICES, mobileSurcharge: MOBILE_SURCHARGE }));
-app.get("/api/locations", (req, res) => res.json(LOCATIONS));
-app.get("/api/info", (req, res) => res.json({ businessName: BUSINESS_NAME }));
+app.post("/api/ai-assist", async (req, res) => {
+  if (req.query.password !== ADMIN_PASSWORD) return res.status(401).json({ error: "Unauthorized" });
+  if (!ANTHROPIC_API_KEY) return res.status(400).json({ error: "AI assistant not configured — add ANTHROPIC_API_KEY in Render's environment variables." });
+  const { message } = req.body;
+  if (!(message || "").trim()) return res.status(400).json({ error: "message required" });
+
+  const config = getConfig();
+  const systemPrompt = `You help edit a ski tuning shop's website and booking content. You may ONLY propose changes to fields that already exist in the JSON config object below — never invent new fields or change its structure/types.
+
+Respond with ONLY a raw JSON object (no markdown, no code fences) with exactly two keys:
+- "explanation": a short, friendly, plain-English summary of what you'd change and why (or, if the request isn't about editing this config, an explanation of that).
+- "patch": an object containing ONLY the fields that should change, in the same shape as the config below (nested objects like "hero", "socials", "mobilePage" should include only their changed sub-fields; "services" and "locations", if changed, should be the FULL replacement array). If nothing should change, use {}.
+
+Current config:
+${JSON.stringify(config, null, 2)}`;
+
+  try {
+    const r = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: {
+        "x-api-key": ANTHROPIC_API_KEY,
+        "anthropic-version": "2023-06-01",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: ANTHROPIC_MODEL,
+        max_tokens: 2000,
+        system: systemPrompt,
+        messages: [{ role: "user", content: message }],
+      }),
+    });
+    const data = await r.json();
+    if (!r.ok) return res.status(502).json({ error: data.error?.message || "AI request failed" });
+    const text = (data.content || []).map((c) => c.text || "").join("");
+    let parsed = null;
+    try { parsed = JSON.parse(text); }
+    catch (e) {
+      const match = text.match(/\{[\s\S]*\}/);
+      if (match) { try { parsed = JSON.parse(match[0]); } catch (e2) {} }
+    }
+    if (!parsed) return res.status(502).json({ error: "Could not understand the AI's response — try rephrasing." });
+    res.json({ success: true, explanation: parsed.explanation || "", patch: parsed.patch || {} });
+  } catch (err) {
+    console.error(`✗ AI assist failed:`, err.message);
+    res.status(500).json({ error: "AI request failed" });
+  }
+});
 
 // Shared slot-window rules: weekdays are one window, Sat/Sun another;
 // mobile uses 2-hour increments, in-shop locations use 30-minute increments.
@@ -164,7 +257,8 @@ function getWindow(dayOfWeek, isMobile) {
 }
 
 function isValidLocation(location) {
-  return location === "mobile" || LOCATIONS.some((l) => l.id === location);
+  if (location === "mobile") return isMobileEnabled();
+  return getLocations().some((l) => l.id === location);
 }
 
 // Returns [{time, status}] for a date+location, applying the 1-hour advance cutoff.
@@ -183,8 +277,9 @@ function computeSlots(date, location) {
     .map((b) => b.time)
     .value();
 
-  // Blocked dates/times apply owner-wide, across every location and mobile.
-  const blockedForDay = db.get("blocked").filter((b) => b.date === date).value();
+  // Blocked entries with location:null are "master" blocks that apply to every
+  // location and mobile; entries with a location only apply to that one.
+  const blockedForDay = db.get("blocked").filter((b) => b.date === date && (b.location == null || b.location === location)).value();
   const wholeDayBlocked = blockedForDay.some((b) => !b.time);
   const blockedTimes = new Set(blockedForDay.filter((b) => b.time).map((b) => b.time));
 
@@ -231,10 +326,10 @@ app.post("/api/bookings", async (req, res) => {
   // Resolve services & prices server-side — never trust client-submitted prices.
   const resolvedItems = [];
   for (const it of items) {
-    const svc = SERVICES.find((s) => s.id === it.serviceId);
+    const svc = getServices().find((s) => s.id === it.serviceId);
     if (!svc) return res.status(400).json({ error: `Unknown service: ${it.serviceId}` });
     const qty = Math.max(1, Math.min(10, Number(it.qty) || 1));
-    const unitPrice = svc.price + (isMobile ? MOBILE_SURCHARGE : 0);
+    const unitPrice = svc.price + (isMobile ? getMobileSurcharge() : 0);
     resolvedItems.push({ serviceId: svc.id, serviceName: svc.name, unitPrice, qty });
   }
   const totalPrice = resolvedItems.reduce((sum, i) => sum + i.unitPrice * i.qty, 0);
@@ -545,7 +640,9 @@ app.post("/api/send-review", async (req, res) => {
   } catch (err) { console.error(`✗ Manual review SMS failed:`, err.message); res.status(500).json({ error: "Failed to send" }); }
 });
 
-// ── Block times — owner-wide, applies across every location and mobile ──
+// ── Block times — each entry has an optional `location`. A null location
+// is a "master" block applying to every location and mobile at once; a
+// specific location (location-a / location-b / mobile) blocks just that one.
 app.get("/api/blocked", (req, res) => {
   if (req.query.password !== ADMIN_PASSWORD) return res.status(401).json({ error: "Unauthorized" });
   res.json(db.get("blocked").value());
@@ -553,24 +650,27 @@ app.get("/api/blocked", (req, res) => {
 
 app.post("/api/blocked", (req, res) => {
   if (req.query.password !== ADMIN_PASSWORD) return res.status(401).json({ error: "Unauthorized" });
-  const { date, time } = req.body;
+  const { date, time, location } = req.body;
   if (!date) return res.status(400).json({ error: "date required" });
-  const exists = db.get("blocked").find((b) => b.date === date && (b.time || null) === (time || null)).value();
-  if (!exists) db.get("blocked").push({ date, time: time || null }).write();
+  const loc = location || null;
+  const exists = db.get("blocked").find((b) => b.date === date && (b.time || null) === (time || null) && (b.location || null) === loc).value();
+  if (!exists) db.get("blocked").push({ date, time: time || null, location: loc }).write();
   res.json({ success: true });
 });
 
 app.delete("/api/blocked", (req, res) => {
   if (req.query.password !== ADMIN_PASSWORD) return res.status(401).json({ error: "Unauthorized" });
-  const { date, time } = req.body;
-  db.set("blocked", db.get("blocked").value().filter((b) => !(b.date === date && (b.time || null) === (time || null)))).write();
+  const { date, time, location } = req.body;
+  const loc = location || null;
+  db.set("blocked", db.get("blocked").value().filter((b) => !(b.date === date && (b.time || null) === (time || null) && (b.location || null) === loc))).write();
   res.json({ success: true });
 });
 
 app.post("/api/blocked/range", (req, res) => {
   if (req.query.password !== ADMIN_PASSWORD) return res.status(401).json({ error: "Unauthorized" });
-  const { date, startTime, endTime } = req.body;
+  const { date, startTime, endTime, location } = req.body;
   if (!date || !startTime || !endTime) return res.status(400).json({ error: "date, startTime, endTime required" });
+  const loc = location || null;
   const [sh, sm] = startTime.split(':').map(Number);
   const [eh, em] = endTime.split(':').map(Number);
   const startMin = sh * 60 + sm, endMin = eh * 60 + em;
@@ -578,8 +678,8 @@ app.post("/api/blocked/range", (req, res) => {
   for (let mins = startMin; mins < endMin; mins += 30) {
     const h = Math.floor(mins / 60), m = mins % 60;
     const t = String(h).padStart(2, '0') + ':' + String(m).padStart(2, '0');
-    const exists = db.get("blocked").find((b) => b.date === date && b.time === t).value();
-    if (!exists) db.get("blocked").push({ date, time: t }).write();
+    const exists = db.get("blocked").find((b) => b.date === date && b.time === t && (b.location || null) === loc).value();
+    if (!exists) db.get("blocked").push({ date, time: t, location: loc }).write();
   }
   res.json({ success: true });
 });
@@ -723,7 +823,7 @@ cron.schedule("* * * * *", async () => {
     try {
       if (twilioClient) {
         await twilioClient.messages.create({
-          body: `Hi ${w.customerName}! How was your experience at ${BUSINESS_NAME}? Takes 20 seconds: ${BASE_URL}/review?token=${w.reviewToken}`,
+          body: `Hi ${w.customerName}! How was your experience at ${bizName()}? Takes 20 seconds: ${BASE_URL}/review?token=${w.reviewToken}`,
           from: TWILIO_PHONE_NUMBER, to: w.phone,
         });
       }

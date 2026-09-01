@@ -230,6 +230,10 @@ tr:hover td{background:rgba(255,255,255,0.02)}
     <button class="nav-item" onclick="showPage('reviews',this)"><span class="nav-item-icon">★</span> Reviews</button>
     <button class="nav-item" onclick="showPage('expenses',this)"><span class="nav-item-icon">💸</span> Expenses</button>
 
+    <div class="sb-section">Edits</div>
+    <button class="nav-item" onclick="showPage('editor',this)"><span class="nav-item-icon">✎</span> Site Editor</button>
+    <button class="nav-item" onclick="showPage('ai',this)"><span class="nav-item-icon">✦</span> AI Assistant</button>
+
     <div class="sb-bottom">
       <button class="nav-item" onclick="showPage('danger',this)"><span class="nav-item-icon">⚠</span> Danger Zone</button>
       <button class="nav-item" onclick="logout()"><span class="nav-item-icon">⏻</span> Log Out</button>
@@ -248,7 +252,10 @@ const API = /\bonrender\.com$/.test(location.hostname) || location.hostname === 
   : 'https://skidoc-booking-eblt.onrender.com';
 
 let pwd = '', stats = null, bookings = [], walkins = [], feedback = [], expenses = [];
+let siteConfig = null, locationsList = [];
 let currentPage = 'overview', currentPeriod = 'today', currentBookingsFilter = 'all';
+let currentBlockScope = 'master'; // 'master' | 'location-a' | 'location-b' | 'mobile'
+let aiHistory = [], aiPendingPatch = null;
 
 async function login() {
   pwd = document.getElementById('pwd').value.trim();
@@ -256,12 +263,14 @@ async function login() {
   const btn = document.getElementById('login-btn');
   btn.textContent = 'Connecting...'; btn.disabled = true;
   try {
-    const [sr, br, wr, fr, er] = await Promise.all([
+    const [sr, br, wr, fr, er, cr, lr] = await Promise.all([
       fetch(API + '/api/stats?password=' + encodeURIComponent(pwd)),
       fetch(API + '/api/bookings?password=' + encodeURIComponent(pwd)),
       fetch(API + '/api/walkins?password=' + encodeURIComponent(pwd)),
       fetch(API + '/api/feedback?password=' + encodeURIComponent(pwd)),
       fetch(API + '/api/expenses?password=' + encodeURIComponent(pwd)),
+      fetch(API + '/api/site-config'),
+      fetch(API + '/api/locations'),
     ]);
     if (sr.status === 401) { showErr('Wrong password.'); btn.textContent = 'Access Dashboard'; btn.disabled = false; return; }
     stats = await sr.json();
@@ -269,12 +278,10 @@ async function login() {
     walkins = await wr.json();
     feedback = await fr.json();
     expenses = await er.json();
+    siteConfig = await cr.json();
+    locationsList = await lr.json();
 
-    try {
-      const ir = await fetch(API + '/api/info');
-      const info = await ir.json();
-      if (info.businessName) { document.getElementById('sb-name').textContent = info.businessName; document.title = info.businessName + ' — Admin'; }
-    } catch (e) {}
+    if (siteConfig.businessName) { document.getElementById('sb-name').textContent = siteConfig.businessName; document.title = siteConfig.businessName + ' — Admin'; }
 
     document.getElementById('login').style.display = 'none';
     document.getElementById('app').style.display = 'flex';
@@ -287,7 +294,7 @@ async function login() {
 
 function showErr(msg) { const e = document.getElementById('err'); e.textContent = msg; e.style.display = 'block'; }
 
-const PAGE_TITLES = { overview:'Overview', schedule:'Schedule', traffic:'Website Traffic', bookings:'Bookings', clients:'Clients', manual:'Manual Entry', walkins:'Walk-ins', availability:'Block Times', reviews:'Reviews', expenses:'Expenses', danger:'Danger Zone' };
+const PAGE_TITLES = { overview:'Overview', schedule:'Schedule', traffic:'Website Traffic', bookings:'Bookings', clients:'Clients', manual:'Manual Entry', walkins:'Walk-ins', availability:'Block Times', reviews:'Reviews', expenses:'Expenses', editor:'Site Editor', ai:'AI Assistant', danger:'Danger Zone' };
 
 function showPage(page, el) {
   currentPage = page;
@@ -307,6 +314,8 @@ function showPage(page, el) {
   else if (page === 'availability') renderAvailability();
   else if (page === 'reviews') renderReviews();
   else if (page === 'expenses') renderExpenses();
+  else if (page === 'editor') renderSiteEditor();
+  else if (page === 'ai') renderAiAssistant();
   else if (page === 'danger') renderDanger();
 }
 
@@ -322,10 +331,17 @@ function fmt12(t) {
 }
 function fmtDate(d) { const [y, mo, day] = d.split('-'); return MONTHS[parseInt(mo) - 1] + ' ' + parseInt(day); }
 function isMobileBooking(b) { return b.location === 'mobile'; }
+function addressFor(b) {
+  if (isMobileBooking(b)) return b.address || '';
+  const loc = locationsList.find((l) => l.id === b.location);
+  return (loc && loc.address) || '';
+}
 function typeBadge(b) {
-  return isMobileBooking(b)
+  const addr = addressFor(b);
+  const pill = isMobileBooking(b)
     ? `<span style="background:rgba(245,158,11,0.12);color:var(--yellow);font-size:10px;font-weight:700;padding:3px 8px;border-radius:6px">🚗 Mobile</span>`
     : `<span style="background:rgba(59,130,246,0.1);color:var(--primary);font-size:10px;font-weight:700;padding:3px 8px;border-radius:6px">📍 ${b.locationName || 'In-Shop'}</span>`;
+  return addr ? `${pill}<div style="font-size:11px;color:var(--text3);margin-top:3px">${addr}</div>` : pill;
 }
 
 // ── Overview ─────────────────────────────────────────────────
@@ -371,7 +387,7 @@ function renderOverview(period) {
                 </div>
                 <div style="font-size:13px;color:var(--text2);margin-bottom:8px">${b.serviceName}</div>
                 <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
-                  ${typeBadge(b)}${b.address && isMobileBooking(b) ? `<span style="font-size:12px;color:var(--text3)">${b.address}</span>` : ''}
+                  ${typeBadge(b)}
                   ${b.phone ? `<span style="font-size:11px;color:var(--text3)">${b.phone}</span>` : ''}
                 </div>
               </div>
@@ -559,7 +575,7 @@ function renderSchedule() {
           <td style="color:var(--text2)">${fmt12(b.time)}</td>
           <td><div style="font-weight:600">${b.customerName}</div><div style="font-size:11px;color:var(--text3)">${b.phone || ''}</div></td>
           <td style="color:var(--text2)">${b.serviceName}</td>
-          <td>${typeBadge(b)}${b.address && isMobileBooking(b) ? `<div style="font-size:11px;color:var(--text3);margin-top:3px">${b.address}</div>` : ''}</td>
+          <td>${typeBadge(b)}</td>
           <td style="font-weight:700;color:var(--green)">$${b.servicePrice}</td>
           <td><span class="badge badge-confirmed">Confirmed</span></td>
           <td><button onclick="markNoShow('${b.id}')" style="padding:5px 11px;border-radius:7px;border:1.5px solid var(--red);background:var(--red-bg);color:var(--red);font-family:inherit;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap">No-Show</button></td>
@@ -645,7 +661,7 @@ function renderBookings(filter) {
           <div class="mob-card-top"><div style="display:flex;gap:6px;flex-wrap:wrap">${statusBadge}${sourceBadge}</div><span style="font-family:monospace;font-size:11px;color:var(--text3)">#${b.shortId || b.id.slice(-6)}</span></div>
           <div class="mob-card-name">${b.customerName}</div>
           <div class="mob-card-sub">${b.phone || '—'}</div>
-          <div class="mob-card-meta">${b.serviceName}<br>${typeBadge(b)}${b.address && isMobileBooking(b) ? ' · ' + b.address : ''}<br>${b.date} · ${fmt12(b.time)} · <span style="color:var(--green);font-weight:700">$${b.servicePrice}</span>${tipLine}</div>
+          <div class="mob-card-meta">${b.serviceName}<br>${typeBadge(b)}<br>${b.date} · ${fmt12(b.time)} · <span style="color:var(--green);font-weight:700">$${b.servicePrice}</span>${tipLine}</div>
           ${b.status === 'confirmed' ? `<div class="mob-card-actions">
             <button onclick="addTip('${b.id}',this)" style="padding:7px 14px;border-radius:8px;border:1.5px solid var(--yellow);background:var(--yellow-bg);color:var(--yellow);font-family:inherit;font-size:12px;font-weight:700;cursor:pointer">${b.tipAmount ? 'Edit Tip' : '+ Tip'}</button>
             <button onclick="markNoShow('${b.id}')" style="padding:7px 14px;border-radius:8px;border:1.5px solid var(--red);background:var(--red-bg);color:var(--red);font-family:inherit;font-size:12px;font-weight:700;cursor:pointer">No-Show</button>
@@ -666,7 +682,7 @@ function renderBookings(filter) {
           <td style="font-family:monospace;font-size:11px;color:var(--text3)">${b.shortId || b.id.slice(-6)}</td>
           <td><div style="font-weight:600">${b.customerName}</div><div style="font-size:11px;color:var(--text3)">${b.phone || '—'}</div></td>
           <td style="color:var(--text2)">${b.serviceName}</td>
-          <td>${typeBadge(b)}${b.address && isMobileBooking(b) ? `<div style="font-size:11px;color:var(--text3);margin-top:3px">${b.address}</div>` : ''}</td>
+          <td>${typeBadge(b)}</td>
           <td style="color:var(--text2)">${b.date}</td>
           <td style="color:var(--text2)">${fmt12(b.time)}</td>
           <td>${priceCell}</td>
@@ -960,13 +976,33 @@ async function addWalkin() {
 }
 
 // ── Block Times ──────────────────────────────────────────────
-function renderAvailability() {
+function blockScopeName(scope) {
+  if (scope === 'master') return 'All Locations';
+  if (scope === 'mobile') return 'Mobile';
+  const loc = locationsList.find((l) => l.id === scope);
+  return loc ? loc.name : scope;
+}
+function blockScopeParam() { return currentBlockScope === 'master' ? null : currentBlockScope; }
+
+function renderAvailability(scope) {
+  if (scope) currentBlockScope = scope;
   const today = new Date().toISOString().split('T')[0];
+  const tabStyle = (s) => `padding:8px 18px;border-radius:8px;border:1.5px solid ${currentBlockScope === s ? 'var(--primary)' : 'var(--border2)'};background:${currentBlockScope === s ? 'var(--primary-glow)' : 'transparent'};color:${currentBlockScope === s ? 'var(--primary)' : 'var(--text2)'};font-family:inherit;font-size:13px;font-weight:600;cursor:pointer;transition:all 0.15s`;
+  const isMaster = currentBlockScope === 'master';
+  const tabs = `<div style="display:flex;gap:8px;margin-bottom:24px;flex-wrap:wrap">
+    <button style="${tabStyle('master')}" onclick="renderAvailability('master')">⬡ All Locations (Master)</button>
+    <button style="${tabStyle('location-a')}" onclick="renderAvailability('location-a')">📍 ${blockScopeName('location-a')}</button>
+    <button style="${tabStyle('location-b')}" onclick="renderAvailability('location-b')">📍 ${blockScopeName('location-b')}</button>
+    <button style="${tabStyle('mobile')}" onclick="renderAvailability('mobile')">🚐 Mobile</button>
+  </div>`;
+  const scopeDesc = isMaster ? 'Blocks every location and mobile at once — for holidays or days fully closed.' : `Only blocks ${blockScopeName(currentBlockScope)} — everywhere else stays open for booking.`;
+
   document.getElementById('main').innerHTML = `
-    <div class="page-hdr"><h1>Block Times</h1><p>Mark dates or time slots as unavailable — applies across all locations and mobile.</p></div>
+    <div class="page-hdr"><h1>Block Times</h1><p>${scopeDesc}</p></div>
+    ${tabs}
     <div class="form-card" style="margin-bottom:20px">
       <h3 style="margin-bottom:4px">Block a single day</h3>
-      <p style="font-size:13px;color:var(--text2);margin-bottom:16px">No one will be able to book any slots on that date.</p>
+      <p style="font-size:13px;color:var(--text2);margin-bottom:16px">No one will be able to book any slots on that date${isMaster ? ', anywhere' : ` at ${blockScopeName(currentBlockScope)}`}.</p>
       <div style="display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap">
         <div class="field" style="margin:0;flex:1;min-width:180px"><label>Date</label><input type="date" id="single-day-date" min="${today}"/></div>
         <button class="btn-sm" onclick="blockSingleDay()" style="height:44px">Block Day</button>
@@ -994,24 +1030,24 @@ function renderAvailability() {
       </div>
       <div class="form-msg" id="range-msg"></div>
     </div>
+    ${isMaster ? '' : `
     <div class="form-card" style="margin-bottom:20px">
-      <h3 style="margin-bottom:16px">Manage individual slots</h3>
+      <h3 style="margin-bottom:16px">Manage individual slots — ${blockScopeName(currentBlockScope)}</h3>
       <div style="display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap">
         <div class="field" style="margin:0;flex:1;min-width:180px"><label>Date</label><input type="date" id="block-date" min="${today}"/></div>
-        <div class="field" style="margin:0;min-width:180px"><label>Location</label><select id="block-location"><option value="location-a">Location A</option><option value="location-b">Test Location</option><option value="mobile">Mobile</option></select></div>
         <button class="btn-sm" onclick="loadBlockDate()" style="height:44px">Load Slots →</button>
       </div>
     </div>
-    <div id="block-slots-area"></div>`;
+    <div id="block-slots-area"></div>`}`;
 }
 
 async function blockSingleDay() {
   const date = document.getElementById('single-day-date').value;
   const msg = document.getElementById('single-day-msg');
   if (!date) { msg.className = 'form-msg fail'; msg.style.display = 'block'; msg.textContent = 'Pick a date first.'; return; }
-  const r = await fetch(API + '/api/blocked?password=' + encodeURIComponent(pwd), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ date }) });
+  const r = await fetch(API + '/api/blocked?password=' + encodeURIComponent(pwd), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ date, location: blockScopeParam() }) });
   const d = await r.json();
-  if (d.success) { msg.className = 'form-msg ok'; msg.style.display = 'block'; msg.textContent = `✓ ${new Date(date + 'T12:00:00').toLocaleDateString('en-CA', { weekday: 'long', month: 'long', day: 'numeric' })} is now fully blocked.`; document.getElementById('single-day-date').value = ''; }
+  if (d.success) { msg.className = 'form-msg ok'; msg.style.display = 'block'; msg.textContent = `✓ ${new Date(date + 'T12:00:00').toLocaleDateString('en-CA', { weekday: 'long', month: 'long', day: 'numeric' })} is now blocked for ${blockScopeName(currentBlockScope)}.`; document.getElementById('single-day-date').value = ''; }
   else { msg.className = 'form-msg fail'; msg.style.display = 'block'; msg.textContent = 'Error — try again.'; }
 }
 
@@ -1025,8 +1061,8 @@ async function blockDaysRange() {
   while (cur <= last) { dates.push(cur.toISOString().split('T')[0]); cur.setDate(cur.getDate() + 1); }
   msg.className = 'form-msg ok'; msg.style.display = 'block'; msg.textContent = `Blocking ${dates.length} day(s)...`;
   let ok = 0;
-  for (const date of dates) { try { await fetch(API + '/api/blocked?password=' + encodeURIComponent(pwd), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ date }) }); ok++; } catch (e) {} }
-  msg.textContent = `✓ Blocked ${ok} day(s): ${new Date(start + 'T12:00:00').toLocaleDateString('en-CA', { month: 'short', day: 'numeric' })} – ${new Date(end + 'T12:00:00').toLocaleDateString('en-CA', { month: 'short', day: 'numeric' })}.`;
+  for (const date of dates) { try { await fetch(API + '/api/blocked?password=' + encodeURIComponent(pwd), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ date, location: blockScopeParam() }) }); ok++; } catch (e) {} }
+  msg.textContent = `✓ Blocked ${ok} day(s) for ${blockScopeName(currentBlockScope)}: ${new Date(start + 'T12:00:00').toLocaleDateString('en-CA', { month: 'short', day: 'numeric' })} – ${new Date(end + 'T12:00:00').toLocaleDateString('en-CA', { month: 'short', day: 'numeric' })}.`;
   document.getElementById('days-range-start').value = ''; document.getElementById('days-range-end').value = '';
 }
 
@@ -1037,15 +1073,15 @@ async function blockRange() {
   const msg = document.getElementById('range-msg');
   if (!date || !start || !end) { msg.className = 'form-msg fail'; msg.style.display = 'block'; msg.textContent = 'Fill in all three fields.'; return; }
   if (start >= end) { msg.className = 'form-msg fail'; msg.style.display = 'block'; msg.textContent = '"From" must be before "To".'; return; }
-  const r = await fetch(API + '/api/blocked/range?password=' + encodeURIComponent(pwd), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ date, startTime: start, endTime: end }) });
+  const r = await fetch(API + '/api/blocked/range?password=' + encodeURIComponent(pwd), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ date, startTime: start, endTime: end, location: blockScopeParam() }) });
   const d = await r.json();
-  if (d.success) { msg.className = 'form-msg ok'; msg.style.display = 'block'; msg.textContent = `✓ Blocked all slots from ${formatTime12(start)} to ${formatTime12(end)} on ${new Date(date + 'T12:00:00').toLocaleDateString('en-CA', { month: 'short', day: 'numeric' })}.`; document.getElementById('range-date').value = ''; document.getElementById('range-start').value = ''; document.getElementById('range-end').value = ''; }
+  if (d.success) { msg.className = 'form-msg ok'; msg.style.display = 'block'; msg.textContent = `✓ Blocked ${blockScopeName(currentBlockScope)} from ${formatTime12(start)} to ${formatTime12(end)} on ${new Date(date + 'T12:00:00').toLocaleDateString('en-CA', { month: 'short', day: 'numeric' })}.`; document.getElementById('range-date').value = ''; document.getElementById('range-start').value = ''; document.getElementById('range-end').value = ''; }
   else { msg.className = 'form-msg fail'; msg.style.display = 'block'; msg.textContent = 'Error — try again.'; }
 }
 
 async function loadBlockDate() {
   const date = document.getElementById('block-date').value;
-  const location = document.getElementById('block-location').value;
+  const location = currentBlockScope;
   if (!date) return;
   const area = document.getElementById('block-slots-area');
   area.innerHTML = `<div style="color:var(--text3);padding:20px">Loading...</div>`;
@@ -1055,7 +1091,8 @@ async function loadBlockDate() {
   ]);
   const slotsData = await slotsRes.json();
   const blockedAll = await blockedRes.json();
-  const dayBlocked = blockedAll.some((b) => b.date === date && !b.time);
+  const loc = blockScopeParam();
+  const dayBlocked = blockedAll.some((b) => b.date === date && !b.time && ((b.location || null) === null || (b.location || null) === loc));
   const allSlots = slotsData.slots || [];
   area.innerHTML = `
     <div class="form-card">
@@ -1077,11 +1114,11 @@ async function loadBlockDate() {
 function formatTime12(t) { const [h, m] = t.split(':'); const hr = parseInt(h); return `${hr > 12 ? hr - 12 : hr || 12}:${m} ${hr >= 12 ? 'PM' : 'AM'}`; }
 
 async function toggleDay(date, isBlocked) {
-  await fetch(API + '/api/blocked?password=' + encodeURIComponent(pwd), { method: isBlocked ? 'DELETE' : 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ date }) });
+  await fetch(API + '/api/blocked?password=' + encodeURIComponent(pwd), { method: isBlocked ? 'DELETE' : 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ date, location: blockScopeParam() }) });
   loadBlockDate();
 }
 async function toggleSlot(date, time, isBlocked) {
-  await fetch(API + '/api/blocked?password=' + encodeURIComponent(pwd), { method: isBlocked ? 'DELETE' : 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ date, time }) });
+  await fetch(API + '/api/blocked?password=' + encodeURIComponent(pwd), { method: isBlocked ? 'DELETE' : 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ date, time, location: blockScopeParam() }) });
   loadBlockDate();
 }
 
@@ -1189,6 +1226,266 @@ async function deleteExpense(id) {
   expenses = await (await fetch(API + '/api/expenses?password=' + encodeURIComponent(pwd))).json();
   stats = await (await fetch(API + '/api/stats?password=' + encodeURIComponent(pwd))).json();
   renderExpenses();
+}
+
+// ── Site Editor (CMS) ────────────────────────────────────────
+function cmsMsg(id, ok, text) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.className = 'form-msg ' + (ok ? 'ok' : 'fail');
+  el.textContent = text;
+  el.style.display = 'block';
+}
+
+async function putSiteConfig(patch) {
+  const r = await fetch(API + '/api/site-config?password=' + encodeURIComponent(pwd), {
+    method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(patch),
+  });
+  const d = await r.json();
+  if (d.success) siteConfig = d.siteConfig;
+  return d;
+}
+
+function renderSiteEditor() {
+  const c = siteConfig || {};
+  const mobileOn = c.mobileEnabled !== false;
+  const svc = c.services || [];
+  const locs = c.locations || [];
+
+  document.getElementById('main').innerHTML = `
+    <div class="page-hdr"><h1>Site Editor</h1><p>Edit what shows on your website and booking page — no code required.</p></div>
+
+    <div class="form-card" style="border-color:${mobileOn ? 'var(--border)' : 'var(--red)'}">
+      <h3>Mobile Service — On / Off Switch</h3>
+      <p>Turning this off immediately hides mobile everywhere: the "We Come To You" banner on your homepage, the Mobile page, the mobile pricing toggle, and the mobile option on your booking page. Turn it back on any time — nothing is deleted.</p>
+      <div style="display:flex;align-items:center;gap:16px">
+        <span class="badge ${mobileOn ? 'badge-confirmed' : 'badge-denied'}" style="font-size:12px;padding:6px 14px">${mobileOn ? 'MOBILE IS ON' : 'MOBILE IS OFF'}</span>
+        <button class="btn-sm" style="${mobileOn ? 'background:var(--red)' : ''}" onclick="toggleMobileService()">${mobileOn ? 'Turn Mobile Off' : 'Turn Mobile Back On'}</button>
+      </div>
+      <div class="form-msg" id="mobile-toggle-msg"></div>
+    </div>
+
+    <div class="form-card">
+      <h3>Business Info</h3>
+      <p>Feeds your SMS messages and website footer.</p>
+      <div class="form-row" style="grid-template-columns:1fr 1fr 1fr">
+        <div class="field"><label>Business Name</label><input type="text" id="cms-name" value="${c.businessName || ''}"/></div>
+        <div class="field"><label>Phone</label><input type="text" id="cms-phone" value="${c.phone || ''}"/></div>
+        <div class="field"><label>Email</label><input type="text" id="cms-email" value="${c.email || ''}"/></div>
+      </div>
+      <div style="margin-top:16px"><button class="btn-sm" onclick="saveBusinessInfo()">Save</button></div>
+      <div class="form-msg" id="business-msg"></div>
+    </div>
+
+    <div class="form-card">
+      <h3>Socials</h3>
+      <div class="form-row" style="grid-template-columns:1fr 1fr 1fr">
+        <div class="field"><label>Instagram URL</label><input type="text" id="cms-ig" value="${(c.socials && c.socials.instagram) || ''}"/></div>
+        <div class="field"><label>Facebook URL</label><input type="text" id="cms-fb" value="${(c.socials && c.socials.facebook) || ''}"/></div>
+        <div class="field"><label>Google URL</label><input type="text" id="cms-gg" value="${(c.socials && c.socials.google) || ''}"/></div>
+      </div>
+      <div style="margin-top:16px"><button class="btn-sm" onclick="saveSocials()">Save</button></div>
+      <div class="form-msg" id="socials-msg"></div>
+    </div>
+
+    <div class="form-card">
+      <h3>Homepage Hero</h3>
+      <div class="field" style="margin-bottom:14px"><label>Headline</label><input type="text" id="cms-hero-h" value="${(c.hero && c.hero.headline) || ''}"/></div>
+      <div class="field"><label>Subtitle</label><input type="text" id="cms-hero-s" value="${(c.hero && c.hero.subtitle) || ''}"/></div>
+      <div style="margin-top:16px"><button class="btn-sm" onclick="saveHero()">Save</button></div>
+      <div class="form-msg" id="hero-msg"></div>
+    </div>
+
+    <div class="form-card">
+      <h3>Mobile Page</h3>
+      <div class="field" style="margin-bottom:14px"><label>Headline</label><input type="text" id="cms-mp-h" value="${(c.mobilePage && c.mobilePage.headline) || ''}"/></div>
+      <div class="field"><label>Description</label><input type="text" id="cms-mp-d" value="${(c.mobilePage && c.mobilePage.description) || ''}"/></div>
+      <div style="margin-top:16px"><button class="btn-sm" onclick="saveMobilePage()">Save</button></div>
+      <div class="form-msg" id="mp-msg"></div>
+    </div>
+
+    <div class="form-card">
+      <h3>Kids' Discount Banner</h3>
+      <p>The callout shown above your pricing table.</p>
+      <div class="field"><label>Text</label><input type="text" id="cms-kids" value="${c.kidsDiscountText || ''}"/></div>
+      <div style="margin-top:16px"><button class="btn-sm" onclick="saveKidsBanner()">Save</button></div>
+      <div class="form-msg" id="kids-msg"></div>
+    </div>
+
+    <div class="form-card">
+      <h3>Locations</h3>
+      <p>Names and addresses for your two in-shop locations — also shown to customers on the booking page.</p>
+      ${locs.map((l, i) => `<div class="form-row" style="grid-template-columns:1fr 2fr;margin-bottom:${i < locs.length - 1 ? '14px' : '0'}">
+        <div class="field"><label>Name</label><input type="text" id="cms-loc-name-${i}" value="${l.name || ''}"/></div>
+        <div class="field"><label>Address</label><input type="text" id="cms-loc-addr-${i}" value="${l.address || ''}"/></div>
+      </div>`).join('')}
+      <div style="margin-top:16px"><button class="btn-sm" onclick="saveLocations()">Save</button></div>
+      <div class="form-msg" id="locations-msg"></div>
+    </div>
+
+    <div class="form-card">
+      <h3>Services &amp; Pricing</h3>
+      <p>Edit names, prices, and descriptions. Prices shown are in-shop — mobile adds the surcharge automatically.</p>
+      <div id="cms-services-list">${svc.map((s, i) => cmsServiceRow(s, i)).join('')}</div>
+      <div style="margin-top:16px;display:flex;gap:10px;flex-wrap:wrap">
+        <button class="btn-sm" style="background:var(--green)" onclick="addServiceRow()">+ Add Service</button>
+        <button class="btn-sm" onclick="saveServices()">Save All Services</button>
+      </div>
+      <div class="form-msg" id="services-msg"></div>
+    </div>`;
+}
+
+function cmsServiceRow(s, i) {
+  return `<div class="form-card" style="background:var(--bg3);margin-bottom:12px" id="cms-svc-${i}">
+    <div class="form-row" style="grid-template-columns:2fr 1fr 1fr auto">
+      <div class="field"><label>Name</label><input type="text" id="cms-svc-name-${i}" value="${s.name || ''}"/></div>
+      <div class="field"><label>Price ($)</label><input type="number" id="cms-svc-price-${i}" value="${s.price || 0}"/></div>
+      <div class="field"><label>Category</label><select id="cms-svc-cat-${i}"><option value="package" ${s.category === 'package' ? 'selected' : ''}>Package</option><option value="single" ${s.category !== 'package' ? 'selected' : ''}>Individual</option></select></div>
+      <button class="btn-sm" style="background:var(--red);margin-top:20px" onclick="removeServiceRow(${i})">Remove</button>
+    </div>
+    <div class="field" style="margin-top:12px"><label>Description</label><input type="text" id="cms-svc-desc-${i}" value="${(s.description || '').replace(/"/g, '&quot;')}"/></div>
+    <label style="display:flex;align-items:center;gap:8px;margin-top:10px;font-size:12px;color:var(--text2)"><input type="checkbox" id="cms-svc-from-${i}" ${s.fromPrice ? 'checked' : ''}/> Show "from" before the price</label>
+  </div>`;
+}
+
+let cmsServicesDraft = null;
+function addServiceRow() {
+  cmsServicesDraft = readServicesDraft();
+  cmsServicesDraft.push({ id: 'service-' + Date.now(), name: 'New Service', price: 0, category: 'single', description: '' });
+  document.getElementById('cms-services-list').innerHTML = cmsServicesDraft.map(cmsServiceRow).join('');
+}
+function removeServiceRow(i) {
+  cmsServicesDraft = readServicesDraft();
+  cmsServicesDraft.splice(i, 1);
+  document.getElementById('cms-services-list').innerHTML = cmsServicesDraft.map(cmsServiceRow).join('');
+}
+function readServicesDraft() {
+  const svc = (cmsServicesDraft || siteConfig.services);
+  return svc.map((s, i) => {
+    const nameEl = document.getElementById('cms-svc-name-' + i);
+    if (!nameEl) return s; // row was just added/removed and not yet re-read
+    return {
+      id: s.id,
+      name: nameEl.value.trim(),
+      price: Number(document.getElementById('cms-svc-price-' + i).value) || 0,
+      category: document.getElementById('cms-svc-cat-' + i).value,
+      description: document.getElementById('cms-svc-desc-' + i).value.trim(),
+      fromPrice: document.getElementById('cms-svc-from-' + i).checked,
+    };
+  });
+}
+
+async function saveBusinessInfo() {
+  const d = await putSiteConfig({ businessName: document.getElementById('cms-name').value.trim(), phone: document.getElementById('cms-phone').value.trim(), email: document.getElementById('cms-email').value.trim() });
+  cmsMsg('business-msg', d.success, d.success ? '✓ Saved.' : (d.error || 'Failed.'));
+  if (d.success && siteConfig.businessName) { document.getElementById('sb-name').textContent = siteConfig.businessName; document.title = siteConfig.businessName + ' — Admin'; }
+}
+async function saveSocials() {
+  const d = await putSiteConfig({ socials: { instagram: document.getElementById('cms-ig').value.trim(), facebook: document.getElementById('cms-fb').value.trim(), google: document.getElementById('cms-gg').value.trim() } });
+  cmsMsg('socials-msg', d.success, d.success ? '✓ Saved.' : (d.error || 'Failed.'));
+}
+async function saveHero() {
+  const d = await putSiteConfig({ hero: { headline: document.getElementById('cms-hero-h').value.trim(), subtitle: document.getElementById('cms-hero-s').value.trim() } });
+  cmsMsg('hero-msg', d.success, d.success ? '✓ Saved. Live on your homepage within a moment.' : (d.error || 'Failed.'));
+}
+async function saveMobilePage() {
+  const d = await putSiteConfig({ mobilePage: { headline: document.getElementById('cms-mp-h').value.trim(), description: document.getElementById('cms-mp-d').value.trim() } });
+  cmsMsg('mp-msg', d.success, d.success ? '✓ Saved.' : (d.error || 'Failed.'));
+}
+async function saveKidsBanner() {
+  const d = await putSiteConfig({ kidsDiscountText: document.getElementById('cms-kids').value.trim() });
+  cmsMsg('kids-msg', d.success, d.success ? '✓ Saved.' : (d.error || 'Failed.'));
+}
+async function saveLocations() {
+  const locs = (siteConfig.locations || []).map((l, i) => ({ id: l.id, name: document.getElementById('cms-loc-name-' + i).value.trim(), address: document.getElementById('cms-loc-addr-' + i).value.trim() }));
+  const d = await putSiteConfig({ locations: locs });
+  if (d.success) locationsList = locs;
+  cmsMsg('locations-msg', d.success, d.success ? '✓ Saved.' : (d.error || 'Failed.'));
+}
+async function saveServices() {
+  const services = readServicesDraft();
+  if (services.some((s) => !s.name)) { cmsMsg('services-msg', false, 'Every service needs a name.'); return; }
+  const d = await putSiteConfig({ services });
+  cmsServicesDraft = null;
+  cmsMsg('services-msg', d.success, d.success ? '✓ Saved — live on your booking page and services page.' : (d.error || 'Failed.'));
+}
+async function toggleMobileService() {
+  const next = !(siteConfig.mobileEnabled !== false);
+  if (!next && !confirm('Turn mobile service off? It disappears from your website and booking page immediately, but nothing is deleted — you can turn it back on any time.')) return;
+  const d = await putSiteConfig({ mobileEnabled: next });
+  cmsMsg('mobile-toggle-msg', d.success, d.success ? (next ? '✓ Mobile is back on.' : '✓ Mobile is now off everywhere.') : (d.error || 'Failed.'));
+  if (d.success) renderSiteEditor();
+}
+
+// ── AI Assistant (scoped to Site Editor content only) ───────────
+function renderAiAssistant() {
+  document.getElementById('main').innerHTML = `
+    <div class="page-hdr"><h1>AI Assistant</h1><p>Describe a change in plain English — it can only edit things in the Site Editor (prices, text, business info, mobile on/off). It always shows you the change before applying it.</p></div>
+    <div class="chart-card" style="margin-bottom:20px">
+      <div id="ai-thread" style="display:flex;flex-direction:column;gap:14px;margin-bottom:20px;max-height:420px;overflow-y:auto">${aiHistory.length ? aiHistory.map(aiBubble).join('') : '<div style="color:var(--text3);font-size:13px">Try: "raise the seasonal tune price by $5" or "turn off mobile service".</div>'}</div>
+      <div id="ai-pending"></div>
+      <div style="display:flex;gap:10px;margin-top:14px">
+        <input type="text" id="ai-input" placeholder="What would you like to change?" style="flex:1;background:var(--bg3);border:1px solid var(--border2);border-radius:10px;padding:12px 15px;font-family:'Outfit',sans-serif;font-size:14px;color:var(--text);outline:none" onkeydown="if(event.key==='Enter')sendAiMessage()"/>
+        <button class="btn-sm" id="ai-send-btn" onclick="sendAiMessage()">Send</button>
+      </div>
+    </div>`;
+  renderAiPending();
+}
+
+function aiBubble(m) {
+  if (m.role === 'user') return `<div style="align-self:flex-end;max-width:80%;background:var(--primary);color:#fff;padding:10px 16px;border-radius:14px 14px 4px 14px;font-size:13px">${m.text}</div>`;
+  return `<div style="align-self:flex-start;max-width:80%;background:var(--bg3);border:1px solid var(--border);padding:10px 16px;border-radius:14px 14px 14px 4px;font-size:13px;color:var(--text2)">${m.text}</div>`;
+}
+
+function renderAiPending() {
+  const area = document.getElementById('ai-pending');
+  if (!area) return;
+  if (!aiPendingPatch || !Object.keys(aiPendingPatch).length) { area.innerHTML = ''; return; }
+  area.innerHTML = `<div class="form-card" style="border-color:var(--primary);margin-bottom:0">
+    <h3 style="margin-bottom:12px">Proposed change</h3>
+    <pre style="background:var(--bg);border-radius:10px;padding:14px;font-size:12px;color:var(--text2);overflow-x:auto;white-space:pre-wrap">${JSON.stringify(aiPendingPatch, null, 2)}</pre>
+    <div style="display:flex;gap:10px;margin-top:14px">
+      <button class="btn-sm" style="background:var(--green)" onclick="applyAiPatch()">Apply Change</button>
+      <button class="btn-sm" style="background:var(--red)" onclick="discardAiPatch()">Discard</button>
+    </div>
+  </div>`;
+}
+
+async function sendAiMessage() {
+  const input = document.getElementById('ai-input');
+  const message = input.value.trim();
+  if (!message) return;
+  aiHistory.push({ role: 'user', text: message });
+  input.value = '';
+  const btn = document.getElementById('ai-send-btn');
+  btn.textContent = 'Thinking…'; btn.disabled = true;
+  renderAiAssistant();
+  try {
+    const r = await fetch(API + '/api/ai-assist?password=' + encodeURIComponent(pwd), {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ message }),
+    });
+    const d = await r.json();
+    if (!r.ok) { aiHistory.push({ role: 'assistant', text: d.error || 'Something went wrong.' }); aiPendingPatch = null; }
+    else { aiHistory.push({ role: 'assistant', text: d.explanation || 'Done.' }); aiPendingPatch = (d.patch && Object.keys(d.patch).length) ? d.patch : null; }
+  } catch (e) {
+    aiHistory.push({ role: 'assistant', text: 'Connection error — try again.' });
+    aiPendingPatch = null;
+  }
+  renderAiAssistant();
+}
+
+async function applyAiPatch() {
+  if (!aiPendingPatch) return;
+  const d = await putSiteConfig(aiPendingPatch);
+  aiHistory.push({ role: 'assistant', text: d.success ? '✓ Applied.' : (d.error || 'Failed to apply.') });
+  aiPendingPatch = null;
+  if (d.success && siteConfig.locations) locationsList = siteConfig.locations;
+  renderAiAssistant();
+}
+function discardAiPatch() {
+  aiPendingPatch = null;
+  aiHistory.push({ role: 'assistant', text: 'Okay, discarded.' });
+  renderAiAssistant();
 }
 
 // ── Danger Zone ──────────────────────────────────────────────
