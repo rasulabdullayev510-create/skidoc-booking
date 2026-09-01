@@ -103,18 +103,8 @@ function locationLabel(location, address) {
   return loc ? loc.name : location;
 }
 
-// SMS to owner — approve or deny request
-async function sendOwnerRequest(booking) {
-  if (!twilioClient || !OWNER_PHONE) { console.log(`[SMS SKIPPED] Owner request`); return; }
-  const where = locationLabel(booking.location, booking.address);
-  await twilioClient.messages.create({
-    body: `New booking request!\n${booking.customerName} wants ${booking.serviceName}\nWhere: ${where}\n${booking.date} at ${formatTime(booking.time)}\nPhone: ${booking.phone}\n\nReply YES to confirm or NO to decline.`,
-    from: TWILIO_PHONE_NUMBER,
-    to: OWNER_PHONE,
-  });
-}
-
-// SMS to customer — booking confirmed
+// SMS to customer — booking confirmed. Also notifies the owner, since
+// bookings auto-confirm the moment a customer books (no approval step).
 async function sendCustomerConfirmation(booking) {
   if (!twilioClient) { console.log(`[SMS SKIPPED] Confirmation for ${booking.customerName}`); return; }
   const where = locationLabel(booking.location, booking.address);
@@ -125,7 +115,7 @@ async function sendCustomerConfirmation(booking) {
   });
   if (OWNER_PHONE) {
     await twilioClient.messages.create({
-      body: `✓ Confirmed: ${booking.customerName} — ${booking.serviceName} on ${booking.date} at ${formatTime(booking.time)}`,
+      body: `New booking! ${booking.customerName} — ${booking.serviceName}\nWhere: ${where}\n${booking.date} at ${formatTime(booking.time)}\nPhone: ${booking.phone}`,
       from: TWILIO_PHONE_NUMBER,
       to: OWNER_PHONE,
     });
@@ -349,7 +339,7 @@ app.post("/api/bookings", async (req, res) => {
     servicePrice: totalPrice,
     date, time, customerName, phone,
     email: email || null, notes: notes || null,
-    status: "pending",
+    status: "confirmed",
     reviewToken: generateToken(),
     reviewSentAt: null,
     createdAt: new Date().toISOString(),
@@ -357,10 +347,10 @@ app.post("/api/bookings", async (req, res) => {
   booking.locationName = locationLabel(booking.location, booking.address);
 
   db.get("bookings").push(booking).write();
-  console.log(`✓ Booking request: ${booking.id} (${booking.shortId}) — ${customerName} for ${booking.serviceName} on ${date} at ${time} @ ${booking.locationName}`);
+  console.log(`✓ Booking confirmed: ${booking.id} (${booking.shortId}) — ${customerName} for ${booking.serviceName} on ${date} at ${time} @ ${booking.locationName}`);
 
-  try { await sendOwnerRequest(booking); console.log(`✓ Owner request sent → ${OWNER_PHONE}`); }
-  catch (err) { console.error(`✗ Owner request failed:`, err.message); }
+  try { await sendCustomerConfirmation(booking); console.log(`✓ Confirmation sent → ${customerName}`); }
+  catch (err) { console.error(`✗ Confirmation SMS failed:`, err.message); }
 
   res.json({
     success: true,
