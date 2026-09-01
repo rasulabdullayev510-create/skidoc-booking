@@ -225,7 +225,6 @@ tr:hover td{background:rgba(255,255,255,0.02)}
     <button class="nav-item" onclick="showPage('bookings',this)"><span class="nav-item-icon">☰</span> All Bookings</button>
     <button class="nav-item" onclick="showPage('clients',this)"><span class="nav-item-icon">👤</span> Clients</button>
     <button class="nav-item" onclick="showPage('manual',this)"><span class="nav-item-icon">＋</span> Manual Entry</button>
-    <button class="nav-item" onclick="showPage('walkins',this)"><span class="nav-item-icon">🚶</span> Walk-ins</button>
     <button class="nav-item" onclick="showPage('availability',this)"><span class="nav-item-icon">🚫</span> Block Times</button>
     <button class="nav-item" onclick="showPage('reviews',this)"><span class="nav-item-icon">★</span> Reviews</button>
     <button class="nav-item" onclick="showPage('expenses',this)"><span class="nav-item-icon">💸</span> Expenses</button>
@@ -251,7 +250,7 @@ const API = /\bonrender\.com$/.test(location.hostname) || location.hostname === 
   ? window.location.origin
   : 'https://skidoc-booking-eblt.onrender.com';
 
-let pwd = '', stats = null, bookings = [], walkins = [], feedback = [], expenses = [];
+let pwd = '', stats = null, bookings = [], feedback = [], expenses = [];
 let siteConfig = null, locationsList = [];
 let currentPage = 'overview', currentPeriod = 'today', currentBookingsFilter = 'all';
 let currentBlockScope = 'master'; // 'master' | 'location-a' | 'location-b' | 'mobile'
@@ -263,10 +262,9 @@ async function login() {
   const btn = document.getElementById('login-btn');
   btn.textContent = 'Connecting...'; btn.disabled = true;
   try {
-    const [sr, br, wr, fr, er, cr, lr] = await Promise.all([
+    const [sr, br, fr, er, cr, lr] = await Promise.all([
       fetch(API + '/api/stats?password=' + encodeURIComponent(pwd)),
       fetch(API + '/api/bookings?password=' + encodeURIComponent(pwd)),
-      fetch(API + '/api/walkins?password=' + encodeURIComponent(pwd)),
       fetch(API + '/api/feedback?password=' + encodeURIComponent(pwd)),
       fetch(API + '/api/expenses?password=' + encodeURIComponent(pwd)),
       fetch(API + '/api/site-config'),
@@ -275,7 +273,6 @@ async function login() {
     if (sr.status === 401) { showErr('Wrong password.'); btn.textContent = 'Access Dashboard'; btn.disabled = false; return; }
     stats = await sr.json();
     bookings = await br.json();
-    walkins = await wr.json();
     feedback = await fr.json();
     expenses = await er.json();
     siteConfig = await cr.json();
@@ -294,7 +291,7 @@ async function login() {
 
 function showErr(msg) { const e = document.getElementById('err'); e.textContent = msg; e.style.display = 'block'; }
 
-const PAGE_TITLES = { overview:'Overview', schedule:'Schedule', traffic:'Website Traffic', bookings:'Bookings', clients:'Clients', manual:'Manual Entry', walkins:'Walk-ins', availability:'Block Times', reviews:'Reviews', expenses:'Expenses', editor:'Site Editor', ai:'AI Assistant', danger:'Danger Zone' };
+const PAGE_TITLES = { overview:'Overview', schedule:'Schedule', traffic:'Website Traffic', bookings:'Bookings', clients:'Clients', manual:'Manual Entry', availability:'Block Times', reviews:'Reviews', expenses:'Expenses', editor:'Site Editor', ai:'AI Assistant', danger:'Danger Zone' };
 
 function showPage(page, el) {
   currentPage = page;
@@ -310,7 +307,6 @@ function showPage(page, el) {
   else if (page === 'bookings') renderBookings();
   else if (page === 'clients') renderClients();
   else if (page === 'manual') renderManualEntry();
-  else if (page === 'walkins') renderWalkins();
   else if (page === 'availability') renderAvailability();
   else if (page === 'reviews') renderReviews();
   else if (page === 'expenses') renderExpenses();
@@ -489,7 +485,6 @@ function renderOverview(period) {
           </div>
           <div style="margin-top:20px;display:flex;flex-direction:column;gap:8px">
             <div style="display:flex;justify-content:space-between;font-size:13px"><span style="color:var(--text2)">Total site views</span><span style="font-weight:700">${stats.totalViews.toLocaleString()}</span></div>
-            <div style="display:flex;justify-content:space-between;font-size:13px"><span style="color:var(--text2)">Walk-in customers</span><span style="font-weight:700">${stats.totalWalkins}</span></div>
           </div>
         </div>
       </div>
@@ -543,7 +538,6 @@ function renderOverview(period) {
     </div>
     <div class="stats-row">
       <div class="stat-card blue"><div class="stat-lbl">Site Views</div><div class="stat-num blue">${stats.totalViews.toLocaleString()}</div><div class="stat-sub">All pages</div></div>
-      <div class="stat-card blue"><div class="stat-lbl">Walk-ins</div><div class="stat-num">${stats.totalWalkins}</div><div class="stat-sub">Manually added</div></div>
       <div class="stat-card green"><div class="stat-lbl">Total Reviews</div><div class="stat-num green">${feedback.length}</div><div class="stat-sub">Collected via SMS</div></div>
       <div class="stat-card blue"><div class="stat-lbl">Expenses Logged</div><div class="stat-num">${expenses.length}</div><div class="stat-sub">Across all categories</div></div>
     </div>`;
@@ -706,7 +700,9 @@ function renderBookings(filter) {
 function renderClients() {
   const clientMap = {};
   bookings.filter((b) => b.status === 'confirmed' || b.status === 'noshow').forEach((b) => {
-    const key = b.phone ? b.phone.replace(/\D/g, '') : '__' + b.customerName.toLowerCase().trim();
+    // Last 10 digits, so "+18255212075", "8255212075", and "18255212075" all group together.
+    const digits = b.phone ? b.phone.replace(/\D/g, '') : '';
+    const key = digits ? digits.slice(-10) : '__' + b.customerName.toLowerCase().trim();
     if (!clientMap[key]) {
       clientMap[key] = { name: b.customerName, phone: b.phone || '—', visits: 0, noshowCount: 0, totalSpent: 0, services: {}, firstVisit: b.date, lastVisit: b.date, onlineCount: 0, manualCount: 0, mobileCount: 0, inShopCount: 0, latestConfirmedId: null, latestConfirmedDate: null };
     }
@@ -918,63 +914,6 @@ async function addTip(id, btn) {
   } catch (e) { alert('Connection error.'); btn.textContent = 'Add Tip'; btn.disabled = false; }
 }
 
-// ── Walk-ins ─────────────────────────────────────────────────
-function renderWalkins() {
-  document.getElementById('main').innerHTML = `
-    <div class="page-hdr"><h1>Walk-ins</h1><p>Customers added manually for review follow-up (not counted as bookings — use Manual Entry to log revenue)</p></div>
-    <div class="form-card">
-      <h3>Add a walk-in</h3>
-      <p>They'll automatically receive a review SMS 24 hours after you add them.</p>
-      <div class="form-row">
-        <div class="field"><label>Customer Name</label><input type="text" id="wk-name" placeholder="Alex Johnson"/></div>
-        <div class="field"><label>Phone Number</label><input type="tel" id="wk-phone" placeholder="+1 (403) 555-0123"/></div>
-        <div class="field"><label>Service</label><input type="text" id="wk-service" placeholder="e.g. Edge Sharpening"/></div>
-        <button class="btn-sm" onclick="addWalkin()">Add + Schedule SMS</button>
-      </div>
-      <div class="form-msg" id="wk-msg"></div>
-    </div>
-    <div class="table-wrap">
-      <div class="table-head"><span class="table-head-title">Walk-in Customers</span></div>
-      ${window.innerWidth < 640 ? `<div id="wk-tbody">${renderWalkinRows()}</div>` : `<table><thead><tr><th>Customer</th><th>Service</th><th>Added</th><th>Review SMS</th></tr></thead><tbody id="wk-tbody">${renderWalkinRows()}</tbody></table>`}
-    </div>`;
-}
-
-function renderWalkinRows() {
-  const mob = window.innerWidth < 640;
-  if (!walkins.length) return mob ? '<div class="mob-empty">No walk-ins yet</div>' : '<tr><td colspan="4" style="text-align:center;color:var(--text3);padding:40px">No walk-ins yet</td></tr>';
-  if (mob) return '<div class="mob-cards-wrap">' + walkins.map((w) => `<div class="mob-card">
-      <div class="mob-card-top"><div><div class="mob-card-name">${w.customerName}</div><div class="mob-card-sub">${w.phone}</div></div><span class="badge ${w.reviewSentAt ? 'badge-confirmed' : 'badge-pending'}">${w.reviewSentAt ? 'Sent' : 'Scheduled'}</span></div>
-      <div class="mob-card-meta">${w.serviceName} · Added ${new Date(w.createdAt).toLocaleDateString()}</div>
-    </div>`).join('') + '</div>';
-  return walkins.map((w) => `<tr>
-    <td><div style="font-weight:600">${w.customerName}</div><div style="font-size:11px;color:var(--text3)">${w.phone}</div></td>
-    <td style="color:var(--text2)">${w.serviceName}</td>
-    <td style="color:var(--text3);font-size:12px">${new Date(w.createdAt).toLocaleDateString()}</td>
-    <td><span class="badge ${w.reviewSentAt ? 'badge-confirmed' : 'badge-pending'}">${w.reviewSentAt ? 'Sent' : 'Scheduled'}</span></td>
-  </tr>`).join('');
-}
-
-async function addWalkin() {
-  const name = document.getElementById('wk-name').value.trim();
-  const phone = document.getElementById('wk-phone').value.trim();
-  const service = document.getElementById('wk-service').value.trim();
-  const msg = document.getElementById('wk-msg');
-  if (!name || !phone) { msg.className = 'form-msg fail'; msg.style.display = 'block'; msg.textContent = 'Name and phone are required.'; return; }
-  const btn = document.querySelector('.btn-sm');
-  btn.textContent = 'Adding...'; btn.disabled = true;
-  try {
-    const r = await fetch(API + '/api/walkins', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ customerName: name, phone, serviceName: service }) });
-    const d = await r.json();
-    if (d.success) {
-      msg.className = 'form-msg ok'; msg.style.display = 'block'; msg.textContent = '✓ Added! Review SMS scheduled for 24 hours from now.';
-      document.getElementById('wk-name').value = ''; document.getElementById('wk-phone').value = ''; document.getElementById('wk-service').value = '';
-      walkins = await (await fetch(API + '/api/walkins?password=' + encodeURIComponent(pwd))).json();
-      document.getElementById('wk-tbody').innerHTML = renderWalkinRows();
-    } else { msg.className = 'form-msg fail'; msg.style.display = 'block'; msg.textContent = d.error || 'Error.'; }
-  } catch (e) { msg.className = 'form-msg fail'; msg.style.display = 'block'; msg.textContent = 'Connection error.'; }
-  btn.textContent = 'Add + Schedule SMS'; btn.disabled = false;
-}
-
 // ── Block Times ──────────────────────────────────────────────
 function blockScopeName(scope) {
   if (scope === 'master') return 'All Locations';
@@ -1151,7 +1090,7 @@ function renderReviews() {
     </div>
     <div class="form-card" style="margin-bottom:20px">
       <h3>How the review funnel works</h3>
-      <p style="margin-bottom:12px">Every booking and walk-in automatically triggers a review SMS 24 hours after the appointment. 4–5 stars redirects to Google, 1–3 stars stays private here.</p>
+      <p style="margin-bottom:12px">Every booking automatically triggers a review SMS 24 hours after the appointment. 4–5 stars redirects to Google, 1–3 stars stays private here.</p>
       <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center">
         ${[['1', 'Appointment done'], ['→', ''], ['2', 'SMS fires +24h'], ['→', ''], ['4-5★', '→ Google review'], ['→', ''], ['1-3★', '→ Private feedback']].map(([l, t]) => t ? `<div style="background:var(--bg3);border-radius:10px;padding:12px 16px"><div style="font-size:18px;font-weight:800;color:var(--text)">${l}</div><div style="font-size:11px;color:var(--text3);margin-top:3px">${t}</div></div>` : `<div style="color:var(--text3);font-size:18px">${l}</div>`).join('')}
       </div>
@@ -1494,7 +1433,7 @@ function renderDanger() {
     <div class="page-hdr"><h1>Danger Zone</h1><p>Irreversible actions — use with care</p></div>
     <div class="form-card" style="border-color:var(--red)">
       <h3 style="color:var(--red)">Wipe all data</h3>
-      <p>Permanently deletes every booking, walk-in, review, expense, and blocked date. This cannot be undone. Type <strong>DELETE</strong> below to confirm.</p>
+      <p>Permanently deletes every booking, review, expense, and blocked date. This cannot be undone. Type <strong>DELETE</strong> below to confirm.</p>
       <div class="form-row" style="grid-template-columns:1fr auto">
         <div class="field"><label>Confirm</label><input type="text" id="wipe-confirm" placeholder="Type DELETE"/></div>
         <button class="btn-sm" style="background:var(--red)" onclick="wipeData()">Wipe All Data</button>
@@ -1511,7 +1450,7 @@ async function wipeData() {
     const r = await fetch(API + '/api/wipe-data?password=' + encodeURIComponent(pwd), { method: 'POST' });
     const data = await r.json();
     if (data.success) {
-      bookings = []; walkins = []; feedback = []; expenses = [];
+      bookings = []; feedback = []; expenses = [];
       msg.className = 'form-msg ok'; msg.textContent = 'All data wiped.'; msg.style.display = 'block';
       setTimeout(() => showPage('overview', document.querySelector('.nav-item')), 800);
     } else { msg.className = 'form-msg fail'; msg.textContent = data.error || 'Failed.'; msg.style.display = 'block'; }
@@ -1527,7 +1466,7 @@ function logout() {
   document.getElementById('login-btn').textContent = 'Access Dashboard';
   document.getElementById('login-btn').disabled = false;
 }
-function API_RESET() { pwd = ''; stats = null; bookings = []; walkins = []; feedback = []; expenses = []; }
+function API_RESET() { pwd = ''; stats = null; bookings = []; feedback = []; expenses = []; }
 </script>
 </body>
 </html>

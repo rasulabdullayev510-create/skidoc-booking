@@ -18,7 +18,7 @@ app.use(express.static(path.join(__dirname, "public")));
 const adapter = new FileSync("db.json");
 const db = low(adapter);
 db.defaults({
-  bookings: [], feedback: [], walkins: [], expenses: [], blocked: [], pageViews: [],
+  bookings: [], feedback: [], expenses: [], blocked: [], pageViews: [],
   siteConfig: {
     businessName: "Ski Doc Calgary",
     phone: "(825) 521-2075",
@@ -166,19 +166,22 @@ app.get("/api/locations", (req, res) => res.json(getLocations()));
 app.get("/api/info", (req, res) => res.json({ businessName: bizName() }));
 app.get("/api/site-config", (req, res) => res.json(getConfig()));
 
+// Last 10 digits, so "+18255212075", "8255212075", and "18255212075" all match.
+function canonicalPhone(phone) {
+  const digits = (phone || "").toString().replace(/\D/g, "");
+  return digits.length >= 10 ? digits.slice(-10) : digits;
+}
+
 // Returning-customer check for the booking form's "welcome back" greeting.
-// Matches on name + phone against past bookings and walk-ins.
+// Matches on name + phone against past bookings.
 app.get("/api/customer-check", (req, res) => {
   const rawName = (req.query.name || "").toString().trim();
-  let phone = (req.query.phone || "").toString().replace(/[^0-9+]/g, "");
-  if (phone.length === 10) phone = "+1" + phone;
-  else if (phone.length === 11 && phone[0] === "1") phone = "+" + phone;
-  else if (phone.length > 0 && !phone.startsWith("+")) phone = "+" + phone;
+  const phone = canonicalPhone(req.query.phone);
   if (!rawName || !phone) return res.json({ recognized: false });
 
   const nameLower = rawName.toLowerCase();
-  const match = [...db.get("bookings").value(), ...db.get("walkins").value()]
-    .find((c) => c.phone === phone && (c.customerName || "").trim().toLowerCase() === nameLower);
+  const match = db.get("bookings").value()
+    .find((c) => canonicalPhone(c.phone) === phone && (c.customerName || "").trim().toLowerCase() === nameLower);
   res.json({ recognized: !!match, name: match ? match.customerName : null });
 });
 
@@ -493,30 +496,6 @@ app.post("/api/sms-webhook", async (req, res) => {
   res.set("Content-Type", "text/xml").send("<Response></Response>");
 });
 
-// Walk-in customers (manual review follow-up)
-app.post("/api/walkins", async (req, res) => {
-  const { customerName, serviceName } = req.body;
-  let phone = (req.body.phone || "").toString().replace(/[^0-9+]/g, "");
-  if (phone.length === 10) phone = "+1" + phone;
-  else if (phone.length === 11 && phone[0] === "1") phone = "+" + phone;
-  else if (phone.length > 0 && !phone.startsWith("+")) phone = "+" + phone;
-  if (!customerName || !phone) return res.status(400).json({ error: "Name and phone required" });
-  const walkin = {
-    id: `WK-${Date.now()}`, customerName, phone,
-    serviceName: serviceName || "Service",
-    reviewToken: crypto.randomBytes(16).toString("hex"),
-    reviewSentAt: null, createdAt: new Date().toISOString(),
-  };
-  db.get("walkins").push(walkin).write();
-  console.log(`✓ Walk-in added: ${customerName}`);
-  res.json({ success: true, id: walkin.id });
-});
-
-app.get("/api/walkins", (req, res) => {
-  if (req.query.password !== ADMIN_PASSWORD) return res.status(401).json({ error: "Unauthorized" });
-  res.json(db.get("walkins").value().slice().reverse());
-});
-
 app.get("/api/bookings", (req, res) => {
   if (req.query.password !== ADMIN_PASSWORD) return res.status(401).json({ error: "Unauthorized" });
   res.json(db.get("bookings").value().slice().reverse());
@@ -525,9 +504,7 @@ app.get("/api/bookings", (req, res) => {
 app.post("/api/review", (req, res) => {
   const { token, rating, comment } = req.body;
   if (!token || !rating) return res.status(400).json({ error: "token and rating required" });
-  const booking = db.get("bookings").find({ reviewToken: token }).value();
-  const walkin  = !booking ? db.get("walkins").find({ reviewToken: token }).value() : null;
-  const record  = booking || walkin;
+  const record = db.get("bookings").find({ reviewToken: token }).value();
   if (!record) return res.status(404).json({ error: "Invalid token" });
   db.get("feedback").push({
     id: Date.now(), sourceId: record.id,
@@ -539,9 +516,7 @@ app.post("/api/review", (req, res) => {
 });
 
 app.get("/api/review/:token", (req, res) => {
-  const booking = db.get("bookings").find({ reviewToken: req.params.token }).value();
-  const walkin  = !booking ? db.get("walkins").find({ reviewToken: req.params.token }).value() : null;
-  const record  = booking || walkin;
+  const record = db.get("bookings").find({ reviewToken: req.params.token }).value();
   if (!record) return res.status(404).json({ error: "Not found" });
   const alreadyReviewed = db.get("feedback").find({ sourceId: record.id }).value();
   res.json({ customerName: record.customerName, serviceName: record.serviceName, date: record.date || null, alreadyReviewed: !!alreadyReviewed });
@@ -552,11 +527,10 @@ app.get("/api/feedback", (req, res) => {
   res.json(db.get("feedback").value().slice().reverse());
 });
 
-// Danger zone — wipes all bookings, walk-ins, and feedback. Irreversible.
+// Danger zone — wipes all bookings and feedback. Irreversible.
 app.post("/api/wipe-data", (req, res) => {
   if (req.query.password !== ADMIN_PASSWORD) return res.status(401).json({ error: "Unauthorized" });
   db.set("bookings", []).write();
-  db.set("walkins", []).write();
   db.set("feedback", []).write();
   db.set("expenses", []).write();
   db.set("blocked", []).write();
@@ -728,7 +702,6 @@ app.get("/api/stats", (req, res) => {
   if (req.query.password !== ADMIN_PASSWORD) return res.status(401).json({ error: "Unauthorized" });
   const bookings = db.get("bookings").value();
   const feedback = db.get("feedback").value();
-  const walkins = db.get("walkins").value();
   const expenses = db.get("expenses").value();
   const pageViews = db.get("pageViews").value();
   const confirmed = bookings.filter((b) => b.status === "confirmed");
@@ -765,7 +738,7 @@ app.get("/api/stats", (req, res) => {
     totalExpenses, netProfit,
     avgRating, reviewRate,
     totalViews, homeViews, viewsByDay, convRate,
-    totalWalkins: walkins.length, revenueByDay,
+    revenueByDay,
   });
 });
 
@@ -795,7 +768,7 @@ app.get("/dashboard", (req, res) => res.sendFile(path.join(__dirname, "public", 
 app.get("/review", (req, res) => res.sendFile(path.join(__dirname, "public", "review.html")));
 app.get("*", (req, res) => res.sendFile(path.join(__dirname, "public", "index.html")));
 
-// Review SMS cron — bookings + walk-ins
+// Review SMS cron
 cron.schedule("* * * * *", async () => {
   if (process.env.REVIEWS_PAUSED === "true") { console.log("[PAUSED] Review SMS skipped"); return; }
   const now = new Date();
@@ -817,24 +790,6 @@ cron.schedule("* * * * *", async () => {
       await sendReviewSMS(b);
       db.get("bookings").find({ id: b.id }).assign({ reviewSentAt: now.toISOString() }).write();
       console.log(`✓ Review SMS → ${b.customerName} (booking)`);
-    } catch (err) { console.error(`✗ Review SMS failed:`, err.message); }
-  }
-
-  // Walk-ins — fires 24h after added
-  const pendingWalkins = db.get("walkins").filter(w => {
-    if (w.reviewSentAt) return false;
-    return (now - new Date(w.createdAt)) / (1000 * 60) >= 1440;
-  }).value();
-  for (const w of pendingWalkins) {
-    try {
-      if (twilioClient) {
-        await twilioClient.messages.create({
-          body: `Hi ${w.customerName}! How was your experience at ${bizName()}? Takes 20 seconds: ${BASE_URL}/review?token=${w.reviewToken}`,
-          from: TWILIO_PHONE_NUMBER, to: w.phone,
-        });
-      }
-      db.get("walkins").find({ id: w.id }).assign({ reviewSentAt: now.toISOString() }).write();
-      console.log(`✓ Review SMS → ${w.customerName} (walk-in)`);
     } catch (err) { console.error(`✗ Review SMS failed:`, err.message); }
   }
 });
