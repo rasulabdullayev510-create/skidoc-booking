@@ -40,12 +40,12 @@ db.defaults({
     mobileEnabled: true,
     mobileSurcharge: 10,
     locations: [
-      { id: "location-a", name: "Location A", address: "26 Val Gardena View SW, Calgary, AB T3H 5Z5" },
-      { id: "location-b", name: "Test Location", address: "Patina Dr SW, Calgary, AB" },
+      { id: "location-a", name: "Location A", address: "26 Val Gardena View SW, Calgary, AB T3H 5Z5", enabled: true },
+      { id: "location-b", name: "Test Location", address: "Patina Dr SW, Calgary, AB", enabled: true },
     ],
     services: [
       { id: "performance-race-tune", name: "Performance Race Tune", price: 85, category: "package", description: "Full ceramic disc edge sharpening finished to an extra-fine edge, hand-ironed race wax, base and side edges set to the perfect angle." },
-      { id: "seasonal-tune", name: "Seasonal Tune", price: 70, category: "package", description: "Ceramic disc edge sharpening, hand-ironed wax, stone base grind, and base repairs included." },
+      { id: "seasonal-tune", name: "Seasonal Tune", price: 70, category: "package", description: "Ceramic disc edge sharpening, hand-ironed wax, base edge inspection and touch up, and minor base repairs included." },
       { id: "maintenance-tune", name: "Maintenance Tune", price: 60, category: "package", description: "Ceramic disc edge sharpening, an infrared hot wax, and minor base repairs." },
       { id: "waxing-sharpening", name: "Waxing & Sharpening", price: 55, category: "single", description: "Infrared hot base wax and ceramic disc edge sharpening to keep your gear in shape." },
       { id: "infrared-hot-wax", name: "Infrared Hot Wax", price: 25, category: "single", description: "A simple maintenance wax to keep your gear smooth and gliding." },
@@ -60,6 +60,7 @@ db.defaults({
 function getConfig() { return db.get("siteConfig").value(); }
 function getServices() { return getConfig().services; }
 function getLocations() { return getConfig().locations; }
+function getEnabledLocations() { return getLocations().filter((l) => l.enabled !== false); }
 function getMobileSurcharge() { return getConfig().mobileSurcharge; }
 function isMobileEnabled() { return getConfig().mobileEnabled !== false; }
 function bizName() { return getConfig().businessName || BUSINESS_NAME; }
@@ -162,7 +163,7 @@ async function sendWinbackSMS(phone, name) {
 }
 
 app.get("/api/services", (req, res) => res.json({ services: getServices(), mobileSurcharge: getMobileSurcharge(), mobileEnabled: isMobileEnabled() }));
-app.get("/api/locations", (req, res) => res.json(getLocations()));
+app.get("/api/locations", (req, res) => res.json(req.query.all ? getLocations() : getEnabledLocations()));
 app.get("/api/info", (req, res) => res.json({ businessName: bizName() }));
 app.get("/api/site-config", (req, res) => res.json(getConfig()));
 
@@ -267,7 +268,7 @@ function getWindow(dayOfWeek, isMobile) {
 
 function isValidLocation(location) {
   if (location === "mobile") return isMobileEnabled();
-  return getLocations().some((l) => l.id === location);
+  return getEnabledLocations().some((l) => l.id === location);
 }
 
 // Returns [{time, status}] for a date+location, applying the 1-hour advance cutoff.

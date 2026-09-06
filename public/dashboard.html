@@ -268,7 +268,7 @@ async function login() {
       fetch(API + '/api/feedback?password=' + encodeURIComponent(pwd)),
       fetch(API + '/api/expenses?password=' + encodeURIComponent(pwd)),
       fetch(API + '/api/site-config'),
-      fetch(API + '/api/locations'),
+      fetch(API + '/api/locations?all=1'),
     ]);
     if (sr.status === 401) { showErr('Wrong password.'); btn.textContent = 'Access Dashboard'; btn.disabled = false; return; }
     stats = await sr.json();
@@ -1253,11 +1253,20 @@ function renderSiteEditor() {
 
     <div class="form-card">
       <h3>Locations</h3>
-      <p>Names and addresses for your two in-shop locations — also shown to customers on the booking page.</p>
-      ${locs.map((l, i) => `<div class="form-row" style="grid-template-columns:1fr 2fr;margin-bottom:${i < locs.length - 1 ? '14px' : '0'}">
-        <div class="field"><label>Name</label><input type="text" id="cms-loc-name-${i}" value="${l.name || ''}"/></div>
-        <div class="field"><label>Address</label><input type="text" id="cms-loc-addr-${i}" value="${l.address || ''}"/></div>
-      </div>`).join('')}
+      <p>Names and addresses for your in-shop locations — also shown to customers on the booking page. Removing one hides it from booking immediately, but nothing is deleted — bring it back any time.</p>
+      ${locs.map((l, i) => {
+        const locOn = l.enabled !== false;
+        return `<div style="padding:14px;border:1.5px solid var(--border2);border-radius:10px;margin-bottom:${i < locs.length - 1 ? '14px' : '0'}">
+        <div class="form-row" style="grid-template-columns:1fr 2fr">
+          <div class="field"><label>Name</label><input type="text" id="cms-loc-name-${i}" value="${l.name || ''}" ${!locOn ? 'disabled' : ''}/></div>
+          <div class="field"><label>Address</label><input type="text" id="cms-loc-addr-${i}" value="${l.address || ''}" ${!locOn ? 'disabled' : ''}/></div>
+        </div>
+        <div style="margin-top:12px;display:flex;align-items:center;gap:10px">
+          <span class="badge ${locOn ? 'badge-confirmed' : 'badge-denied'}" style="font-size:11px">${locOn ? 'ACTIVE' : 'REMOVED'}</span>
+          <button class="btn-sm" style="background:${locOn ? 'var(--red)' : 'var(--green)'}" onclick="toggleLocation(${i})">${locOn ? 'Remove' : 'Bring Back'}</button>
+        </div>
+      </div>`;
+      }).join('')}
       <div style="margin-top:16px"><button class="btn-sm" onclick="saveLocations()">Save</button></div>
       <div class="form-msg" id="locations-msg"></div>
     </div>
@@ -1336,10 +1345,21 @@ async function saveKidsBanner() {
   cmsMsg('kids-msg', d.success, d.success ? '✓ Saved.' : (d.error || 'Failed.'));
 }
 async function saveLocations() {
-  const locs = (siteConfig.locations || []).map((l, i) => ({ id: l.id, name: document.getElementById('cms-loc-name-' + i).value.trim(), address: document.getElementById('cms-loc-addr-' + i).value.trim() }));
+  const locs = (siteConfig.locations || []).map((l, i) => ({ id: l.id, name: document.getElementById('cms-loc-name-' + i).value.trim(), address: document.getElementById('cms-loc-addr-' + i).value.trim(), enabled: l.enabled !== false }));
   const d = await putSiteConfig({ locations: locs });
   if (d.success) locationsList = locs;
   cmsMsg('locations-msg', d.success, d.success ? '✓ Saved.' : (d.error || 'Failed.'));
+}
+async function toggleLocation(i) {
+  const locs = siteConfig.locations || [];
+  const target = locs[i];
+  const next = !(target.enabled !== false);
+  if (!next && !confirm(`Remove "${target.name}" from the booking page? It disappears from booking immediately, but nothing is deleted — you can bring it back any time.`)) return;
+  const updated = locs.map((l, j) => j === i ? { ...l, enabled: next } : l);
+  const d = await putSiteConfig({ locations: updated });
+  if (d.success) locationsList = updated;
+  cmsMsg('locations-msg', d.success, d.success ? (next ? '✓ Brought back.' : '✓ Removed from booking.') : (d.error || 'Failed.'));
+  if (d.success) renderSiteEditor();
 }
 async function saveServices() {
   const services = readServicesDraft();
