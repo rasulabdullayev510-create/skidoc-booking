@@ -14,7 +14,11 @@ app.use(express.urlencoded({ extended: false }));
 app.use(express.json());
 app.use(express.static(path.join(__dirname, "public")));
 
-const adapter = new FileSync("db.json");
+// DATA_DIR points at Render's persistent disk mount (set via env var) so
+// db.json survives redeploys instead of resetting to defaults every time.
+// Falls back to the project directory for local dev, where there's no disk.
+const DATA_DIR = process.env.DATA_DIR || __dirname;
+const adapter = new FileSync(path.join(DATA_DIR, "db.json"));
 const db = low(adapter);
 db.defaults({
   bookings: [], feedback: [], expenses: [], blocked: [], pageViews: [],
