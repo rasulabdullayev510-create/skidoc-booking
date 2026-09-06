@@ -4,7 +4,6 @@ const FileSync = require("lowdb/adapters/FileSync");
 const twilio = require("twilio");
 const crypto = require("crypto");
 const path = require("path");
-const cron = require("node-cron");
 const cors = require("cors");
 
 require("dotenv").config();
@@ -769,31 +768,8 @@ app.get("/dashboard", (req, res) => res.sendFile(path.join(__dirname, "public", 
 app.get("/review", (req, res) => res.sendFile(path.join(__dirname, "public", "review.html")));
 app.get("*", (req, res) => res.sendFile(path.join(__dirname, "public", "index.html")));
 
-// Review SMS cron
-cron.schedule("* * * * *", async () => {
-  if (process.env.REVIEWS_PAUSED === "true") { console.log("[PAUSED] Review SMS skipped"); return; }
-  const now = new Date();
-
-  // Confirmed bookings — fires 24h after appointment. Manual entries carry
-  // their own reviewDelayMinutes (relative to when they were logged), since
-  // the appointment already happened by the time they're entered.
-  const pendingBookings = db.get("bookings").filter(b => {
-    if (b.status !== "confirmed" || b.reviewSentAt) return false;
-    if (typeof b.reviewDelayMinutes === "number") {
-      if (b.reviewDelayMinutes < 0) return false;
-      return (now - new Date(b.createdAt)) / (1000 * 60) >= b.reviewDelayMinutes;
-    }
-    const apptTime = new Date(`${b.date}T${b.time}:00-06:00`);
-    return (now - apptTime) / (1000 * 60) >= 1440;
-  }).value();
-  for (const b of pendingBookings) {
-    try {
-      await sendReviewSMS(b);
-      db.get("bookings").find({ id: b.id }).assign({ reviewSentAt: now.toISOString() }).write();
-      console.log(`✓ Review SMS → ${b.customerName} (booking)`);
-    } catch (err) { console.error(`✗ Review SMS failed:`, err.message); }
-  }
-});
+// Review SMS is sent manually from the admin dashboard (Clients page →
+// Review button) via /api/send-review — no automatic cron firing on its own.
 
 app.listen(PORT, () => {
   console.log(`\n🏔  Ski Doc Calgary — Booking System`);

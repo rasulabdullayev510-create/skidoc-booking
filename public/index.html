@@ -290,6 +290,8 @@ const state = {
   date: null, time: null,
 };
 
+let servicesLoaded = false, locationsLoaded = false, autoSkipChecked = false;
+
 async function loadServices() {
   try {
     const r = await fetch(API + '/api/services');
@@ -300,6 +302,8 @@ async function loadServices() {
   } catch (e) {
     document.getElementById('svc-list').innerHTML = '<p style="color:var(--ink3)">Could not load services — please refresh.</p>';
   }
+  servicesLoaded = true;
+  maybeSkipLocationStep();
 }
 
 async function loadLocations() {
@@ -309,6 +313,19 @@ async function loadLocations() {
     renderLocations();
   } catch (e) {
     document.getElementById('loc-grid').innerHTML = '<p style="color:var(--ink3)">Could not load locations — please refresh.</p>';
+  }
+  locationsLoaded = true;
+  maybeSkipLocationStep();
+}
+
+// If there's only one way to book (a single active location and mobile off),
+// there's nothing to choose — pick it automatically and skip straight to services.
+function maybeSkipLocationStep() {
+  if (autoSkipChecked || !servicesLoaded || !locationsLoaded) return;
+  autoSkipChecked = true;
+  if (locations.length === 1 && !mobileEnabled) {
+    pickLocation(locations[0].id);
+    goStep(2);
   }
 }
 
@@ -361,9 +378,8 @@ function pickLocation(id) {
 }
 
 function validateLocationStep() {
-  const ok = state.location === 'location-a' || state.location === 'location-b'
-    ? true
-    : (state.location === 'mobile' ? !!state.address : false);
+  const isKnownLocation = locations.some((l) => l.id === state.location);
+  const ok = isKnownLocation ? true : (state.location === 'mobile' ? !!state.address : false);
   document.getElementById('btn-1').disabled = !ok;
 }
 
