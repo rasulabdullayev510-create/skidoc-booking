@@ -815,7 +815,7 @@ function renderManualEntry() {
 
       <div style="margin-top:16px;display:flex;align-items:center;gap:12px;flex-wrap:wrap">
         <div class="field" style="margin:0;min-width:200px"><label>Location</label>
-          <select id="me-location" onchange="toggleManualAddress()">${(locationsList || []).map((l) => `<option value="${l.id}">📍 ${l.name}</option>`).join('')}${(siteConfig && siteConfig.mobileEnabled !== false) ? '<option value="mobile">🚗 Mobile</option>' : ''}</select>
+          <select id="me-location" onchange="toggleManualAddress()">${(locationsList || []).map((l) => `<option value="${l.id}">📍 ${l.name}</option>`).join('')}<option value="mobile">🚗 Mobile</option></select>
         </div>
         <div class="field" style="margin:0;flex:1;min-width:200px;display:none" id="me-address-wrap"><label>Address (mobile)</label><input type="text" id="me-address" placeholder="e.g. 123 Main St SW"/></div>
         <div class="field" style="margin:0;flex:1;min-width:200px"><label>Notes (optional)</label><input type="text" id="me-notes" placeholder="e.g. Paid cash"/></div>
