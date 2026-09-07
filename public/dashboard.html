@@ -807,8 +807,8 @@ function renderManualEntry() {
       </div>
 
       <div style="margin-top:16px;display:flex;align-items:center;gap:12px;flex-wrap:wrap">
-        <div class="field" style="margin:0;min-width:200px"><label>Service Type</label>
-          <select id="me-type" onchange="toggleManualAddress()"><option value="inshop">📍 In-Shop</option><option value="mobile">🚗 Mobile</option></select>
+        <div class="field" style="margin:0;min-width:200px"><label>Location</label>
+          <select id="me-location" onchange="toggleManualAddress()">${(locationsList || []).map((l) => `<option value="${l.id}">📍 ${l.name}</option>`).join('')}${(siteConfig && siteConfig.mobileEnabled !== false) ? '<option value="mobile">🚗 Mobile</option>' : ''}</select>
         </div>
         <div class="field" style="margin:0;flex:1;min-width:200px;display:none" id="me-address-wrap"><label>Address (mobile)</label><input type="text" id="me-address" placeholder="e.g. 123 Main St SW"/></div>
         <div class="field" style="margin:0;flex:1;min-width:200px"><label>Notes (optional)</label><input type="text" id="me-notes" placeholder="e.g. Paid cash"/></div>
@@ -896,7 +896,7 @@ function updateManualTotal() {
 }
 
 function toggleManualAddress() {
-  document.getElementById('me-address-wrap').style.display = document.getElementById('me-type').value === 'mobile' ? 'block' : 'none';
+  document.getElementById('me-address-wrap').style.display = document.getElementById('me-location').value === 'mobile' ? 'block' : 'none';
 }
 
 async function addManualEntry() {
@@ -909,17 +909,17 @@ async function addManualEntry() {
   const date = document.getElementById('me-date').value;
   const notes = document.getElementById('me-notes').value.trim();
   const delay = parseInt(document.getElementById('me-delay').value);
-  const serviceType = document.getElementById('me-type').value;
+  const location = document.getElementById('me-location').value;
   const address = document.getElementById('me-address').value.trim();
   const msg = document.getElementById('me-msg');
   if (!name || !items.length) { msg.className = 'form-msg fail'; msg.style.display = 'block'; msg.textContent = 'Name and at least one service are required.'; return; }
-  if (serviceType === 'mobile' && !address) { msg.className = 'form-msg fail'; msg.style.display = 'block'; msg.textContent = 'Address is required for mobile.'; return; }
+  if (location === 'mobile' && !address) { msg.className = 'form-msg fail'; msg.style.display = 'block'; msg.textContent = 'Address is required for mobile.'; return; }
   const btn = document.querySelector('[onclick="addManualEntry()"]');
   btn.textContent = 'Logging...'; btn.disabled = true;
   try {
     const r = await fetch(API + '/api/manual-entry?password=' + encodeURIComponent(pwd), {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ customerName: name, phone, items, date, notes, reviewDelayMinutes: delay, serviceType, address: serviceType === 'mobile' ? address : null }),
+      body: JSON.stringify({ customerName: name, phone, items, date, notes, reviewDelayMinutes: delay, location, address: location === 'mobile' ? address : null }),
     });
     const d = await r.json();
     if (d.success) {
@@ -927,7 +927,6 @@ async function addManualEntry() {
       const smsNote = !phone ? 'No phone — SMS skipped.' : delay === -1 ? 'No review SMS will be sent.' : delay === 0 ? 'Review SMS sent immediately.' : `Review SMS scheduled in ${delay / 60} hour${delay / 60 > 1 ? 's' : ''}.`;
       msg.textContent = '✓ Logged! ' + smsNote;
       ['me-name','me-phone','me-notes','me-address'].forEach((id) => { document.getElementById(id).value = ''; });
-      document.getElementById('me-type').value = 'inshop';
       document.getElementById('me-address-wrap').style.display = 'none';
       bookings = await (await fetch(API + '/api/bookings?password=' + encodeURIComponent(pwd))).json();
       stats = await (await fetch(API + '/api/stats?password=' + encodeURIComponent(pwd))).json();

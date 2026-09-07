@@ -551,10 +551,11 @@ app.post("/api/wipe-data", (req, res) => {
 // ── Manual entry — log a phone/in-person booking directly as confirmed ──
 app.post("/api/manual-entry", async (req, res) => {
   if (req.query.password !== ADMIN_PASSWORD) return res.status(401).json({ error: "Unauthorized" });
-  const { customerName, items, date, notes, reviewDelayMinutes, serviceType, address } = req.body;
+  const { customerName, items, date, notes, reviewDelayMinutes, location, address } = req.body;
   if (!customerName || !Array.isArray(items) || !items.length) return res.status(400).json({ error: "Name and at least one service required" });
-  const isMobile = serviceType === "mobile";
+  const isMobile = location === "mobile";
   if (isMobile && !(address || "").trim()) return res.status(400).json({ error: "Address is required for mobile" });
+  if (!isMobile && !getLocations().some((l) => l.id === location)) return res.status(400).json({ error: "Select a valid location" });
 
   const resolvedItems = items
     .map((it) => ({
@@ -572,11 +573,12 @@ app.post("/api/manual-entry", async (req, res) => {
   else if (phone.length === 11 && phone[0] === "1") phone = "+" + phone;
   else if (phone.length > 0 && !phone.startsWith("+")) phone = "+" + phone;
 
+  const bookingLocation = isMobile ? "mobile" : location;
   const booking = {
     id: `SKI-${Date.now()}`,
     shortId: generateShortId(),
-    location: isMobile ? "mobile" : null,
-    locationName: isMobile ? "Mobile" : "In-Shop",
+    location: bookingLocation,
+    locationName: locationLabel(bookingLocation, isMobile ? address.trim() : null),
     address: isMobile ? address.trim() : null,
     items: resolvedItems,
     serviceName, servicePrice,
