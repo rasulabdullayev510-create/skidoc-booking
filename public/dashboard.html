@@ -785,20 +785,28 @@ function renderClients() {
 }
 
 // ── Manual Entry ─────────────────────────────────────────────
+let manualItemsDraft = [{ name: '', price: '', qty: 1 }];
+
 function renderManualEntry() {
+  manualItemsDraft = [{ name: '', price: '', qty: 1 }];
   const manualBookings = bookings.filter((b) => b.source === 'manual').slice(0, 30);
   document.getElementById('main').innerHTML = `
     <div class="page-hdr"><h1>Manual Entry</h1><p>Log bookings that happened over the phone or in person. They count toward your revenue and monthly stats, and trigger the review SMS automatically.</p></div>
     <div class="form-card" style="margin-bottom:20px">
       <h3 style="margin-bottom:16px">Log a booking</h3>
-      <div class="form-row" style="grid-template-columns:1fr 1fr 1fr 1fr auto">
+      <div class="form-row" style="grid-template-columns:1fr 1fr 1fr">
         <div class="field" style="margin:0"><label>Customer Name</label><input type="text" id="me-name" placeholder="Alex Johnson"/></div>
         <div class="field" style="margin:0"><label>Phone (optional)</label><input type="tel" id="me-phone" placeholder="+1 (403) 555-0123"/></div>
-        <div class="field" style="margin:0"><label>Service</label><input type="text" id="me-service" placeholder="e.g. Edge Sharpening"/></div>
-        <div class="field" style="margin:0"><label>Price ($)</label><input type="number" id="me-price" placeholder="30" min="0"/></div>
         <div class="field" style="margin:0;min-width:130px"><label>Date</label><input type="date" id="me-date" value="${new Date().toISOString().split('T')[0]}"/></div>
       </div>
-      <div style="margin-top:12px;display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+
+      <div style="margin-top:16px" id="me-services-list"></div>
+      <div style="margin-top:4px;display:flex;align-items:center;gap:14px">
+        <button type="button" class="btn-sm" style="background:var(--green)" onclick="addManualItemRow()">+ Add Another Service</button>
+        <span style="font-size:13px;color:var(--text2)">Total: <strong id="me-total" style="color:var(--green)">$0</strong></span>
+      </div>
+
+      <div style="margin-top:16px;display:flex;align-items:center;gap:12px;flex-wrap:wrap">
         <div class="field" style="margin:0;min-width:200px"><label>Service Type</label>
           <select id="me-type" onchange="toggleManualAddress()"><option value="inshop">📍 In-Shop</option><option value="mobile">🚗 Mobile</option></select>
         </div>
@@ -830,6 +838,61 @@ function renderManualEntry() {
           </tr>`).join('') : '<tr><td colspan="5" style="text-align:center;color:var(--text3);padding:40px">No manual entries yet</td></tr>'}
           </tbody></table>`}
     </div>`;
+  renderManualServiceRows();
+}
+
+function manualItemRow(item, i) {
+  return `<div class="form-row" style="grid-template-columns:2fr 1fr auto auto;align-items:end;gap:10px;margin-bottom:10px">
+    <div class="field" style="margin:0"><label>Service</label><input type="text" id="me-svc-name-${i}" value="${(item.name || '').replace(/"/g, '&quot;')}" placeholder="e.g. Edge Sharpening"/></div>
+    <div class="field" style="margin:0"><label>Price ($)</label><input type="number" id="me-svc-price-${i}" value="${item.price}" placeholder="30" min="0" oninput="syncManualItemsDraft();updateManualTotal()"/></div>
+    <div class="field" style="margin:0"><label>Qty</label>
+      <div style="display:flex;align-items:center;gap:8px;height:44px">
+        <button type="button" class="btn-sm" style="padding:4px 12px" onclick="changeManualQty(${i},-1)">−</button>
+        <span style="min-width:18px;text-align:center;font-weight:700">${item.qty}</span>
+        <button type="button" class="btn-sm" style="padding:4px 12px" onclick="changeManualQty(${i},1)">+</button>
+      </div>
+    </div>
+    ${manualItemsDraft.length > 1 ? `<button type="button" class="btn-sm" style="background:var(--red);height:44px" onclick="removeManualItemRow(${i})">Remove</button>` : '<div></div>'}
+  </div>`;
+}
+
+function renderManualServiceRows() {
+  document.getElementById('me-services-list').innerHTML = manualItemsDraft.map(manualItemRow).join('');
+  updateManualTotal();
+}
+
+// Pulls current input values back into the draft array before any
+// add/remove/qty change re-renders the rows (otherwise typed text is lost).
+function syncManualItemsDraft() {
+  manualItemsDraft = manualItemsDraft.map((item, i) => {
+    const nameEl = document.getElementById('me-svc-name-' + i);
+    if (!nameEl) return item;
+    return { name: nameEl.value, price: document.getElementById('me-svc-price-' + i).value, qty: item.qty };
+  });
+}
+
+function addManualItemRow() {
+  syncManualItemsDraft();
+  manualItemsDraft.push({ name: '', price: '', qty: 1 });
+  renderManualServiceRows();
+}
+
+function removeManualItemRow(i) {
+  syncManualItemsDraft();
+  manualItemsDraft.splice(i, 1);
+  renderManualServiceRows();
+}
+
+function changeManualQty(i, delta) {
+  syncManualItemsDraft();
+  manualItemsDraft[i].qty = Math.max(1, Math.min(10, manualItemsDraft[i].qty + delta));
+  renderManualServiceRows();
+}
+
+function updateManualTotal() {
+  const total = manualItemsDraft.reduce((sum, item) => sum + (Number(item.price) || 0) * item.qty, 0);
+  const el = document.getElementById('me-total');
+  if (el) el.textContent = '$' + total.toLocaleString();
 }
 
 function toggleManualAddress() {
@@ -837,31 +900,33 @@ function toggleManualAddress() {
 }
 
 async function addManualEntry() {
+  syncManualItemsDraft();
   const name = document.getElementById('me-name').value.trim();
   const phone = document.getElementById('me-phone').value.trim();
-  const service = document.getElementById('me-service').value.trim();
-  const price = document.getElementById('me-price').value.trim();
+  const items = manualItemsDraft
+    .map((item) => ({ name: (item.name || '').trim(), price: Number(item.price) || 0, qty: item.qty }))
+    .filter((item) => item.name);
   const date = document.getElementById('me-date').value;
   const notes = document.getElementById('me-notes').value.trim();
   const delay = parseInt(document.getElementById('me-delay').value);
   const serviceType = document.getElementById('me-type').value;
   const address = document.getElementById('me-address').value.trim();
   const msg = document.getElementById('me-msg');
-  if (!name || !service) { msg.className = 'form-msg fail'; msg.style.display = 'block'; msg.textContent = 'Name and service are required.'; return; }
+  if (!name || !items.length) { msg.className = 'form-msg fail'; msg.style.display = 'block'; msg.textContent = 'Name and at least one service are required.'; return; }
   if (serviceType === 'mobile' && !address) { msg.className = 'form-msg fail'; msg.style.display = 'block'; msg.textContent = 'Address is required for mobile.'; return; }
   const btn = document.querySelector('[onclick="addManualEntry()"]');
   btn.textContent = 'Logging...'; btn.disabled = true;
   try {
     const r = await fetch(API + '/api/manual-entry?password=' + encodeURIComponent(pwd), {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ customerName: name, phone, serviceName: service, servicePrice: price, date, notes, reviewDelayMinutes: delay, serviceType, address: serviceType === 'mobile' ? address : null }),
+      body: JSON.stringify({ customerName: name, phone, items, date, notes, reviewDelayMinutes: delay, serviceType, address: serviceType === 'mobile' ? address : null }),
     });
     const d = await r.json();
     if (d.success) {
       msg.className = 'form-msg ok'; msg.style.display = 'block';
       const smsNote = !phone ? 'No phone — SMS skipped.' : delay === -1 ? 'No review SMS will be sent.' : delay === 0 ? 'Review SMS sent immediately.' : `Review SMS scheduled in ${delay / 60} hour${delay / 60 > 1 ? 's' : ''}.`;
       msg.textContent = '✓ Logged! ' + smsNote;
-      ['me-name','me-phone','me-service','me-price','me-notes','me-address'].forEach((id) => { document.getElementById(id).value = ''; });
+      ['me-name','me-phone','me-notes','me-address'].forEach((id) => { document.getElementById(id).value = ''; });
       document.getElementById('me-type').value = 'inshop';
       document.getElementById('me-address-wrap').style.display = 'none';
       bookings = await (await fetch(API + '/api/bookings?password=' + encodeURIComponent(pwd))).json();

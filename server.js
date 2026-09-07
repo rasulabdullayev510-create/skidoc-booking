@@ -551,10 +551,21 @@ app.post("/api/wipe-data", (req, res) => {
 // ── Manual entry — log a phone/in-person booking directly as confirmed ──
 app.post("/api/manual-entry", async (req, res) => {
   if (req.query.password !== ADMIN_PASSWORD) return res.status(401).json({ error: "Unauthorized" });
-  const { customerName, serviceName, servicePrice, date, notes, reviewDelayMinutes, serviceType, address } = req.body;
-  if (!customerName || !serviceName) return res.status(400).json({ error: "Name and service required" });
+  const { customerName, items, date, notes, reviewDelayMinutes, serviceType, address } = req.body;
+  if (!customerName || !Array.isArray(items) || !items.length) return res.status(400).json({ error: "Name and at least one service required" });
   const isMobile = serviceType === "mobile";
   if (isMobile && !(address || "").trim()) return res.status(400).json({ error: "Address is required for mobile" });
+
+  const resolvedItems = items
+    .map((it) => ({
+      name: (it.name || "").toString().trim(),
+      price: Number(it.price) || 0,
+      qty: Math.max(1, Math.min(10, Number(it.qty) || 1)),
+    }))
+    .filter((it) => it.name);
+  if (!resolvedItems.length) return res.status(400).json({ error: "Name and at least one service required" });
+  const serviceName = resolvedItems.map((i) => `${i.name}${i.qty > 1 ? ` x${i.qty}` : ""}`).join(", ");
+  const servicePrice = resolvedItems.reduce((sum, i) => sum + i.price * i.qty, 0);
 
   let phone = (req.body.phone || "").toString().replace(/[^0-9+]/g, "");
   if (phone.length === 10) phone = "+1" + phone;
@@ -567,8 +578,8 @@ app.post("/api/manual-entry", async (req, res) => {
     location: isMobile ? "mobile" : null,
     locationName: isMobile ? "Mobile" : "In-Shop",
     address: isMobile ? address.trim() : null,
-    items: [],
-    serviceName, servicePrice: Number(servicePrice) || 0,
+    items: resolvedItems,
+    serviceName, servicePrice,
     date: date || new Date().toISOString().split('T')[0], time: "00:00",
     customerName, phone: phone || null, email: null, notes: notes || null,
     status: "confirmed", source: "manual",
