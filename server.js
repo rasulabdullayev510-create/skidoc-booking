@@ -31,6 +31,8 @@ db.defaults({
       facebook: "https://www.facebook.com/profile.php?id=61582680415253",
       google: "https://share.google/zg5XRvdmsyLY3mBix",
     },
+    // Direct "write a review" link — 4-5 star review-page taps redirect here.
+    googleReviewUrl: process.env.GOOGLE_PLACE_ID || "https://g.page/r/CbgyguKR2ha2EAE/review",
     hero: {
       headline: "Trust Your Turn",
       subtitle: "Fast, affordable, and expert ski & snowboard tuning to keep your gear in peak condition.",
@@ -122,8 +124,9 @@ async function sendCustomerConfirmation(booking) {
     to: booking.phone,
   });
   if (OWNER_PHONE) {
+    const notesLine = booking.notes ? `\nNotes: ${booking.notes}` : "";
     await twilioClient.messages.create({
-      body: `New booking! ${booking.customerName} — ${booking.serviceName}\nWhere: ${where}\n${booking.date} at ${formatTime(booking.time)}\nPhone: ${booking.phone}`,
+      body: `New booking! ${booking.customerName} — ${booking.serviceName}\nWhere: ${where}\n${booking.date} at ${formatTime(booking.time)}\nPhone: ${booking.phone}${notesLine}`,
       from: TWILIO_PHONE_NUMBER,
       to: OWNER_PHONE,
     });

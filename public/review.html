@@ -62,9 +62,10 @@ textarea::placeholder{color:#ccc}
 <script>
 const API=window.location.origin;
 const token=new URLSearchParams(window.location.search).get('token');
-let rating=0;
+let rating=0, googleReviewUrl='', redirecting=false;
 const labels=['','Disappointing','Could be better','It was okay','Really good!','Perfect! ⭐'];
 async function init(){
+  fetch(`${API}/api/site-config`).then(r=>r.json()).then(cfg=>{googleReviewUrl=cfg.googleReviewUrl||'';}).catch(()=>{});
   if(!token){document.getElementById('svc-tag').textContent='Invalid link';return;}
   try{
     const r=await fetch(`${API}/api/review/${token}`);
@@ -77,17 +78,28 @@ async function init(){
 }
 document.querySelectorAll('.star').forEach(s=>{
   s.addEventListener('click',()=>{
+    if(redirecting)return;
     rating=parseInt(s.dataset.v);
     document.querySelectorAll('.star').forEach((st,i)=>st.classList.toggle('on',i<rating));
     document.getElementById('star-lbl').textContent=labels[rating];
     document.getElementById('sub-btn').disabled=false;
+    // 4-5 stars: skip the comment/Submit step entirely and send them
+    // straight to the Google review page while we record it in the background.
+    if(rating>=4 && googleReviewUrl){
+      redirecting=true;
+      document.getElementById('star-lbl').textContent='Taking you to Google…';
+      fetch(`${API}/api/review`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({token,rating,comment:document.getElementById('comment').value.trim()}),keepalive:true}).catch(()=>{});
+      window.location.href=googleReviewUrl;
+    }
   });
   s.addEventListener('mouseover',()=>{
+    if(redirecting)return;
     const v=parseInt(s.dataset.v);
     document.querySelectorAll('.star').forEach((st,i)=>st.style.opacity=i<v?'1':'0.25');
     document.getElementById('star-lbl').textContent=labels[v];
   });
   s.addEventListener('mouseout',()=>{
+    if(redirecting)return;
     document.querySelectorAll('.star').forEach((st,i)=>st.style.opacity=i<rating?'1':'0.25');
     document.getElementById('star-lbl').textContent=rating?labels[rating]:'Tap to rate';
   });
@@ -99,10 +111,10 @@ async function submit(){
   const d=await r.json();
   document.getElementById('form-screen').style.display='none';
   document.getElementById('done-screen').style.display='block';
-  if(d.redirectToGoogle){
+  if(d.redirectToGoogle && googleReviewUrl){
     document.getElementById('done-title').textContent='Amazing!';
     document.getElementById('done-sub').textContent="So glad we nailed it! Mind leaving us a quick Google review?";
-    document.getElementById('google-cta').innerHTML='<a class="google-btn" href="https://search.google.com/local/writereview?placeid=YOUR_PLACE_ID" target="_blank">Leave a Google Review →</a>';
+    document.getElementById('google-cta').innerHTML=`<a class="google-btn" href="${googleReviewUrl}" target="_blank">Leave a Google Review →</a>`;
   }else{
     document.getElementById('done-title').textContent='Thanks for the feedback';
     document.getElementById('done-sub').textContent="We're sorry it wasn't perfect. We'll use this to improve. Hope to see you again!";

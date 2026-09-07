@@ -327,6 +327,9 @@ function fmt12(t) {
 }
 function fmtDate(d) { const [y, mo, day] = d.split('-'); return MONTHS[parseInt(mo) - 1] + ' ' + parseInt(day); }
 function isMobileBooking(b) { return b.location === 'mobile'; }
+function escapeHtml(s) { return (s || '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
+// Customer-typed booking notes, rendered as a small note line wherever a booking is shown.
+function notesLine(b) { return b.notes ? `<div style="font-size:11px;color:var(--text3);margin-top:4px;font-style:italic">📝 ${escapeHtml(b.notes)}</div>` : ''; }
 function addressFor(b) {
   if (isMobileBooking(b)) return b.address || '';
   const loc = locationsList.find((l) => l.id === b.location);
@@ -386,6 +389,7 @@ function renderOverview(period) {
                   ${typeBadge(b)}
                   ${b.phone ? `<span style="font-size:11px;color:var(--text3)">${b.phone}</span>` : ''}
                 </div>
+                ${notesLine(b)}
               </div>
             </div>`).join('') : `<div style="text-align:center;padding:52px 20px;color:var(--text3)">
             <div style="font-size:36px;margin-bottom:12px">📅</div>
@@ -557,6 +561,7 @@ function renderSchedule() {
           <div class="mob-card-name">${b.customerName}</div>
           <div class="mob-card-sub">${b.phone || '—'}</div>
           <div class="mob-card-meta">${b.serviceName}<br>${typeBadge(b)}</div>
+          ${notesLine(b)}
           <div class="mob-card-actions">
             <span class="badge badge-confirmed" style="align-self:center">Confirmed</span>
             <button onclick="markNoShow('${b.id}')" style="padding:7px 14px;border-radius:8px;border:1.5px solid var(--red);background:var(--red-bg);color:var(--red);font-family:inherit;font-size:12px;font-weight:700;cursor:pointer">No-Show</button>
@@ -568,7 +573,7 @@ function renderSchedule() {
           <td style="font-weight:600;color:var(--primary)">${fmtDate(b.date)}</td>
           <td style="color:var(--text2)">${fmt12(b.time)}</td>
           <td><div style="font-weight:600">${b.customerName}</div><div style="font-size:11px;color:var(--text3)">${b.phone || ''}</div></td>
-          <td style="color:var(--text2)">${b.serviceName}</td>
+          <td style="color:var(--text2)">${b.serviceName}${notesLine(b)}</td>
           <td>${typeBadge(b)}</td>
           <td style="font-weight:700;color:var(--green)">$${b.servicePrice}</td>
           <td><span class="badge badge-confirmed">Confirmed</span></td>
@@ -581,6 +586,7 @@ function renderSchedule() {
           <div class="mob-card-top"><span class="mob-card-date">${fmtDate(b.date)} · ${fmt12(b.time)}</span><span style="color:var(--green);font-weight:700">$${b.servicePrice}</span></div>
           <div class="mob-card-name" style="color:var(--text2)">${b.customerName}</div>
           <div class="mob-card-meta">${b.serviceName} · ${typeBadge(b)}</div>
+          ${notesLine(b)}
         </div>`).join('') : '<div class="mob-empty">No past bookings</div>'}</div>`
     : `<table>
         <thead><tr><th>Date</th><th>Time</th><th>Customer</th><th>Service</th><th>Type</th><th>Price</th></tr></thead>
@@ -588,7 +594,7 @@ function renderSchedule() {
           <td style="color:var(--text3)">${fmtDate(b.date)}</td>
           <td style="color:var(--text3)">${fmt12(b.time)}</td>
           <td style="font-weight:600">${b.customerName}</td>
-          <td style="color:var(--text2)">${b.serviceName}</td>
+          <td style="color:var(--text2)">${b.serviceName}${notesLine(b)}</td>
           <td>${typeBadge(b)}</td>
           <td style="font-weight:700;color:var(--green)">$${b.servicePrice}</td>
         </tr>`).join('') : '<tr><td colspan="6" style="text-align:center;color:var(--text3);padding:40px">No past bookings</td></tr>'}
@@ -656,6 +662,7 @@ function renderBookings(filter) {
           <div class="mob-card-name">${b.customerName}</div>
           <div class="mob-card-sub">${b.phone || '—'}</div>
           <div class="mob-card-meta">${b.serviceName}<br>${typeBadge(b)}<br>${b.date} · ${fmt12(b.time)} · <span style="color:var(--green);font-weight:700">$${b.servicePrice}</span>${tipLine}</div>
+          ${notesLine(b)}
           ${b.status === 'confirmed' ? `<div class="mob-card-actions">
             <button onclick="addTip('${b.id}',this)" style="padding:7px 14px;border-radius:8px;border:1.5px solid var(--yellow);background:var(--yellow-bg);color:var(--yellow);font-family:inherit;font-size:12px;font-weight:700;cursor:pointer">${b.tipAmount ? 'Edit Tip' : '+ Tip'}</button>
             <button onclick="markNoShow('${b.id}')" style="padding:7px 14px;border-radius:8px;border:1.5px solid var(--red);background:var(--red-bg);color:var(--red);font-family:inherit;font-size:12px;font-weight:700;cursor:pointer">No-Show</button>
@@ -675,7 +682,7 @@ function renderBookings(filter) {
           return `<tr>
           <td style="font-family:monospace;font-size:11px;color:var(--text3)">${b.shortId || b.id.slice(-6)}</td>
           <td><div style="font-weight:600">${b.customerName}</div><div style="font-size:11px;color:var(--text3)">${b.phone || '—'}</div></td>
-          <td style="color:var(--text2)">${b.serviceName}</td>
+          <td style="color:var(--text2)">${b.serviceName}${notesLine(b)}</td>
           <td>${typeBadge(b)}</td>
           <td style="color:var(--text2)">${b.date}</td>
           <td style="color:var(--text2)">${fmt12(b.time)}</td>
@@ -704,7 +711,7 @@ function renderClients() {
     const digits = b.phone ? b.phone.replace(/\D/g, '') : '';
     const key = digits ? digits.slice(-10) : '__' + b.customerName.toLowerCase().trim();
     if (!clientMap[key]) {
-      clientMap[key] = { name: b.customerName, phone: b.phone || '—', visits: 0, noshowCount: 0, totalSpent: 0, services: {}, firstVisit: b.date, lastVisit: b.date, onlineCount: 0, manualCount: 0, mobileCount: 0, inShopCount: 0, latestConfirmedId: null, latestConfirmedDate: null };
+      clientMap[key] = { name: b.customerName, phone: b.phone || '—', visits: 0, noshowCount: 0, totalSpent: 0, services: {}, firstVisit: b.date, lastVisit: b.date, onlineCount: 0, manualCount: 0, mobileCount: 0, inShopCount: 0, latestConfirmedId: null, latestConfirmedDate: null, latestNotes: null };
     }
     const c = clientMap[key];
     if (b.status === 'confirmed') {
@@ -712,7 +719,7 @@ function renderClients() {
       c.services[b.serviceName] = (c.services[b.serviceName] || 0) + 1;
       if (b.source === 'manual') c.manualCount++; else c.onlineCount++;
       if (isMobileBooking(b)) c.mobileCount++; else c.inShopCount++;
-      if (!c.latestConfirmedDate || b.date > c.latestConfirmedDate) { c.latestConfirmedDate = b.date; c.latestConfirmedId = b.id; }
+      if (!c.latestConfirmedDate || b.date > c.latestConfirmedDate) { c.latestConfirmedDate = b.date; c.latestConfirmedId = b.id; c.latestNotes = b.notes || null; }
     }
     if (b.status === 'noshow') c.noshowCount++;
     if (b.date < c.firstVisit) c.firstVisit = b.date;
@@ -741,7 +748,7 @@ function renderClients() {
                 ${!isNoShowOnly ? `<div style="font-size:11px;color:var(--text3)">${c.visits} visit${c.visits !== 1 ? 's' : ''}${isRepeat ? ' · <span style="color:var(--primary)">Repeat</span>' : ''}</div>` : `<div style="font-size:11px;color:var(--red)">${c.noshowCount}× No-Show</div>`}
               </div>
             </div>
-            ${!isNoShowOnly ? `<div class="mob-card-meta" style="margin-top:6px">${topService ? topService[0] + ' · ' : ''}${sourceLabel}<br>${c.mobileCount > 0 && c.inShopCount > 0 ? `📍 ${c.inShopCount}× In-Shop · 🚗 ${c.mobileCount}× Mobile` : c.mobileCount > 0 ? '🚗 Mobile' : '📍 In-Shop'} · Last: ${fmtDate(c.lastVisit)}</div>` : ''}
+            ${!isNoShowOnly ? `<div class="mob-card-meta" style="margin-top:6px">${topService ? topService[0] + ' · ' : ''}${sourceLabel}<br>${c.mobileCount > 0 && c.inShopCount > 0 ? `📍 ${c.inShopCount}× In-Shop · 🚗 ${c.mobileCount}× Mobile` : c.mobileCount > 0 ? '🚗 Mobile' : '📍 In-Shop'} · Last: ${fmtDate(c.lastVisit)}</div>${notesLine({ notes: c.latestNotes })}` : ''}
             <div class="mob-card-actions">
               ${c.phone !== '—' ? `<button onclick="sendWinback('${c.phone}','${c.name.replace(/'/g,"\\'")}',this)" style="padding:7px 14px;border-radius:8px;border:1.5px solid var(--primary);background:var(--primary-glow);color:var(--primary);font-family:inherit;font-size:12px;font-weight:700;cursor:pointer">📲 Win-Back</button>` : ''}
               ${c.phone !== '—' ? `<button onclick="sendReview('${c.phone}','${c.name.replace(/'/g,"\\'")}',this)" style="padding:7px 14px;border-radius:8px;border:1.5px solid var(--yellow);background:var(--yellow-bg);color:var(--yellow);font-family:inherit;font-size:12px;font-weight:700;cursor:pointer">⭐ Review</button>` : ''}
@@ -770,7 +777,7 @@ function renderClients() {
             <td style="font-weight:700;color:${isNoShowOnly ? 'var(--text3)' : 'var(--green)'};font-size:15px">${isNoShowOnly ? '—' : '$' + c.totalSpent.toLocaleString()}</td>
             <td>${isNoShowOnly ? '—' : `<span style="background:${sourceBgColor};color:${sourceBadgeColor};font-size:11px;font-weight:700;padding:3px 9px;border-radius:6px;letter-spacing:0.04em">${sourceLabel}</span>`}</td>
             <td>${isNoShowOnly ? '—' : typeCell}</td>
-            <td><div style="font-size:13px;color:var(--text2)">${topService ? topService[0] : '—'}</div>${Object.keys(c.services).length > 1 ? `<div style="font-size:11px;color:var(--text3);margin-top:2px">${allServices}</div>` : ''}</td>
+            <td><div style="font-size:13px;color:var(--text2)">${topService ? topService[0] : '—'}</div>${Object.keys(c.services).length > 1 ? `<div style="font-size:11px;color:var(--text3);margin-top:2px">${allServices}</div>` : ''}${notesLine({ notes: c.latestNotes })}</td>
             <td style="color:var(--text3);font-size:12px">${fmtDate(c.firstVisit)}</td>
             <td style="color:${c.lastVisit === new Date().toISOString().split('T')[0] ? 'var(--green)' : 'var(--text3)'};font-size:12px">${fmtDate(c.lastVisit)}</td>
             <td><div style="display:flex;flex-direction:column;gap:6px">
@@ -1307,6 +1314,7 @@ function renderSiteEditor() {
         <div class="field"><label>Facebook URL</label><input type="text" id="cms-fb" value="${(c.socials && c.socials.facebook) || ''}"/></div>
         <div class="field"><label>Google URL</label><input type="text" id="cms-gg" value="${(c.socials && c.socials.google) || ''}"/></div>
       </div>
+      <div class="field" style="margin-top:14px"><label>Google Review Link (used when a customer taps 4-5 stars)</label><input type="text" id="cms-review-url" value="${c.googleReviewUrl || ''}" placeholder="https://g.page/r/.../review"/></div>
       <div style="margin-top:16px"><button class="btn-sm" onclick="saveSocials()">Save</button></div>
       <div class="form-msg" id="socials-msg"></div>
     </div>
@@ -1393,7 +1401,7 @@ async function saveBusinessInfo() {
   if (d.success && siteConfig.businessName) { document.getElementById('sb-name').textContent = siteConfig.businessName; document.title = siteConfig.businessName + ' — Admin'; }
 }
 async function saveSocials() {
-  const d = await putSiteConfig({ socials: { instagram: document.getElementById('cms-ig').value.trim(), facebook: document.getElementById('cms-fb').value.trim(), google: document.getElementById('cms-gg').value.trim() } });
+  const d = await putSiteConfig({ socials: { instagram: document.getElementById('cms-ig').value.trim(), facebook: document.getElementById('cms-fb').value.trim(), google: document.getElementById('cms-gg').value.trim() }, googleReviewUrl: document.getElementById('cms-review-url').value.trim() });
   cmsMsg('socials-msg', d.success, d.success ? '✓ Saved.' : (d.error || 'Failed.'));
 }
 async function saveHero() {
