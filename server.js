@@ -67,14 +67,18 @@ function getEnabledLocations() { return getLocations().filter((l) => l.enabled !
 function getMobileSurcharge() { return getConfig().mobileSurcharge; }
 function isMobileEnabled() { return getConfig().mobileEnabled !== false; }
 function bizName() { return getConfig().businessName || BUSINESS_NAME; }
+function bizPhone() { return getConfig().phone || ""; }
 
 const {
   TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_PHONE_NUMBER,
-  BASE_URL = "http://localhost:3004", PORT = 3004,
+  PORT = 3004,
   BUSINESS_NAME = "Ski Doc Calgary",
   ADMIN_PASSWORD = "skidoc2024",
   OWNER_PHONE,
 } = process.env;
+// `|| ` (not a destructuring default) so an env var left blank on Render
+// still falls back instead of silently producing a link with no domain.
+const BASE_URL = process.env.BASE_URL || "http://localhost:3004";
 
 const twilioClient = TWILIO_ACCOUNT_SID ? twilio(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN) : null;
 
@@ -158,8 +162,9 @@ async function sendReviewSMS(booking) {
 // SMS to a past customer — invite them back
 async function sendWinbackSMS(phone, name) {
   if (!twilioClient) { console.log(`[SMS SKIPPED] Winback for ${name}`); return; }
+  const phoneLine = bizPhone() ? ` or call/text us at ${bizPhone()}` : '';
   await twilioClient.messages.create({
-    body: `Hi ${name}! It's been a while — your gear is probably due for a tune. Book your next visit at https://skidocyyc.ca/book. See you soon!`,
+    body: `Hi ${name}! It's been a while since your last tune at ${bizName()} — edges dull and bases dry out over time, so let's get your gear back in top condition before you're out on the hill again. Book online at https://skidocyyc.ca/book${phoneLine}. See you soon!`,
     from: TWILIO_PHONE_NUMBER,
     to: phone,
   });
