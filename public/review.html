@@ -64,13 +64,11 @@ const API=window.location.origin;
 const token=new URLSearchParams(window.location.search).get('token');
 let rating=0, redirecting=false;
 const labels=['','Disappointing','Could be better','It was okay','Really good!','Perfect! ⭐'];
-// Fetched once up front and awaited (not just read) before any 4-5 star
-// redirect, so a fast tap on a slow connection can't race past it. Capped
-// at 4s so an unusually slow network doesn't leave the tap stuck forever.
-const googleReviewUrlPromise=Promise.race([
-  fetch(`${API}/api/site-config`).then(r=>r.json()).then(cfg=>cfg.googleReviewUrl||''),
-  new Promise(resolve=>setTimeout(()=>resolve(''),4000)),
-]).catch(()=>'');
+// Known-good link available immediately, so a star tap never waits on a
+// network round-trip to redirect. Refreshed in the background in case the
+// owner has changed it in Site Editor since this page was last deployed.
+let googleReviewUrl='https://g.page/r/CbgyguKR2ha2EAE/review';
+fetch(`${API}/api/site-config`).then(r=>r.json()).then(cfg=>{if(cfg.googleReviewUrl)googleReviewUrl=cfg.googleReviewUrl;}).catch(()=>{});
 async function init(){
   if(!token){document.getElementById('svc-tag').textContent='Invalid link';return;}
   try{
@@ -83,24 +81,19 @@ async function init(){
   }catch{document.getElementById('svc-tag').textContent='Could not load';}
 }
 document.querySelectorAll('.star').forEach(s=>{
-  s.addEventListener('click',async()=>{
+  s.addEventListener('click',()=>{
     if(redirecting)return;
     rating=parseInt(s.dataset.v);
     document.querySelectorAll('.star').forEach((st,i)=>st.classList.toggle('on',i<rating));
     document.getElementById('star-lbl').textContent=labels[rating];
     document.getElementById('sub-btn').disabled=false;
     // 4-5 stars: skip the comment/Submit step entirely and send them
-    // straight to the Google review page while we record it in the background.
+    // straight to the Google review page immediately — no network wait —
+    // while we record it in the background.
     if(rating>=4){
       redirecting=true;
-      document.getElementById('star-lbl').textContent='Taking you to Google…';
-      const url=await googleReviewUrlPromise;
-      if(url){
-        fetch(`${API}/api/review`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({token,rating,comment:document.getElementById('comment').value.trim()}),keepalive:true}).catch(()=>{});
-        window.location.href=url;
-      }else{
-        redirecting=false;
-      }
+      fetch(`${API}/api/review`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({token,rating,comment:document.getElementById('comment').value.trim()}),keepalive:true}).catch(()=>{});
+      window.location.href=googleReviewUrl;
     }
   });
   s.addEventListener('mouseover',()=>{
@@ -122,11 +115,10 @@ async function submit(){
   const d=await r.json();
   document.getElementById('form-screen').style.display='none';
   document.getElementById('done-screen').style.display='block';
-  const url=await googleReviewUrlPromise;
-  if(d.redirectToGoogle && url){
+  if(d.redirectToGoogle){
     document.getElementById('done-title').textContent='Amazing!';
     document.getElementById('done-sub').textContent="So glad we nailed it! Mind leaving us a quick Google review?";
-    document.getElementById('google-cta').innerHTML=`<a class="google-btn" href="${url}" target="_blank">Leave a Google Review →</a>`;
+    document.getElementById('google-cta').innerHTML=`<a class="google-btn" href="${googleReviewUrl}" target="_blank">Leave a Google Review →</a>`;
   }else{
     document.getElementById('done-title').textContent='Thanks for the feedback';
     document.getElementById('done-sub').textContent="We're sorry it wasn't perfect. We'll use this to improve. Hope to see you again!";
