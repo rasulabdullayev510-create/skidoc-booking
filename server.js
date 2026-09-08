@@ -39,7 +39,9 @@ db.defaults({
       google: "https://share.google/zg5XRvdmsyLY3mBix",
     },
     // Direct "write a review" link — 4-5 star review-page taps redirect here.
-    googleReviewUrl: process.env.GOOGLE_PLACE_ID || "https://g.page/r/CbgyguKR2ha2EAE/review",
+    // Direct write-review link (skips the g.page short-link's extra
+    // redirect hop through a Google sign-in interstitial).
+    googleReviewUrl: "https://search.google.com/local/writereview?placeid=ChIJrc_l_1JtcVMRuDKC4pHaFrY",
     hero: {
       headline: "Trust Your Turn",
       subtitle: "Fast, affordable, and expert ski & snowboard tuning to keep your gear in peak condition.",
@@ -68,6 +70,16 @@ db.defaults({
     ],
   },
 }).write();
+
+// db.defaults() only fills in siteConfig if the whole key is missing — once
+// the persistent disk keeps real data across deploys, a field added here
+// later never reaches an already-existing siteConfig. Backfill those explicitly.
+(function backfillSiteConfig() {
+  const cfg = db.get("siteConfig").value() || {};
+  if (cfg.googleReviewUrl === undefined) {
+    db.set("siteConfig.googleReviewUrl", "https://search.google.com/local/writereview?placeid=ChIJrc_l_1JtcVMRuDKC4pHaFrY").write();
+  }
+})();
 
 function getConfig() { return db.get("siteConfig").value(); }
 function getServices() { return getConfig().services; }
@@ -101,6 +113,12 @@ function formatTime(t) {
   return `${hr > 12 ? hr - 12 : hr || 12}:${m} ${hr >= 12 ? 'PM' : 'AM'}`;
 }
 
+const MONTH_NAMES = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+function formatDate(dateStr) {
+  const [y, m, d] = dateStr.split('-').map(Number);
+  return `${MONTH_NAMES[m - 1]} ${d}, ${y}`;
+}
+
 // Calgary wall-clock "now" as a naive Date, so comparisons against naive
 // date/time strings (which are always Calgary-local) stay correct regardless
 // of the server's own timezone (Render runs UTC) and DST.
@@ -120,13 +138,27 @@ function locationLabel(location, address) {
   return loc ? loc.name : location;
 }
 
+// Customer-facing: always the actual address, since that's what they need
+// to get there — mobile bookings get their own address plus a note that
+// it's a door-to-door appointment.
+function customerLocationLine(booking) {
+  if (booking.location === 'mobile') return `${booking.address} (done at your door)`;
+  const loc = getLocations().find((l) => l.id === booking.location);
+  return loc ? loc.address : booking.location;
+}
+// Owner-facing: just the location name — they already know the addresses.
+function ownerLocationLine(booking) {
+  if (booking.location === 'mobile') return 'Mobile';
+  const loc = getLocations().find((l) => l.id === booking.location);
+  return loc ? loc.name : booking.location;
+}
+
 // SMS to customer — booking confirmed. Also notifies the owner, since
 // bookings auto-confirm the moment a customer books (no approval step).
 async function sendCustomerConfirmation(booking) {
   if (!twilioClient) { console.log(`[SMS SKIPPED] Confirmation for ${booking.customerName}`); return; }
-  const where = locationLabel(booking.location, booking.address);
   await twilioClient.messages.create({
-    body: `Hi ${booking.customerName}! Your booking is confirmed at ${bizName()}. ${booking.serviceName} on ${booking.date} at ${formatTime(booking.time)} — ${where}. See you then!`,
+    body: `Hi ${booking.customerName}! Your booking is confirmed at ${bizName()}. ${booking.serviceName} on ${formatDate(booking.date)} at ${formatTime(booking.time)} — ${customerLocationLine(booking)}. See you then!`,
     from: TWILIO_PHONE_NUMBER,
     to: booking.phone,
   });
@@ -134,7 +166,7 @@ async function sendCustomerConfirmation(booking) {
     const notesLine = booking.notes ? `\nNotes: ${booking.notes}` : "";
     const emailLine = booking.email ? `\nEmail: ${booking.email}` : "";
     await twilioClient.messages.create({
-      body: `New booking! ${booking.customerName} — ${booking.serviceName}\nWhere: ${where}\n${booking.date} at ${formatTime(booking.time)}\nPhone: ${booking.phone}${emailLine}${notesLine}`,
+      body: `New booking! ${booking.customerName} — ${booking.serviceName}\nWhere: ${ownerLocationLine(booking)}\n${formatDate(booking.date)} at ${formatTime(booking.time)}\nPhone: ${booking.phone}${emailLine}${notesLine}`,
       from: TWILIO_PHONE_NUMBER,
       to: OWNER_PHONE,
     });
@@ -646,9 +678,10 @@ app.post("/api/gear-ready", async (req, res) => {
   if (!phone) return res.status(400).json({ error: "Phone required" });
   if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(time || "")) return res.status(400).json({ error: "Valid pickup time required" });
   if (!twilioClient) return res.status(400).json({ error: "SMS not configured" });
+  const firstName = (customerName || "there").trim().split(" ")[0];
   try {
     await twilioClient.messages.create({
-      body: `Hi ${customerName || "there"}! Your gear is all tuned up and ready for pickup, would you be able to come by at ${formatTime(time)}?`,
+      body: `Hi ${firstName}! Your gear is all tuned up and ready for pickup, would you be able to come by at ${formatTime(time)}?`,
       from: TWILIO_PHONE_NUMBER,
       to: phone,
     });

@@ -67,7 +67,7 @@ const labels=['','Disappointing','Could be better','It was okay','Really good!',
 // Known-good link available immediately, so a star tap never waits on a
 // network round-trip to redirect. Refreshed in the background in case the
 // owner has changed it in Site Editor since this page was last deployed.
-let googleReviewUrl='https://g.page/r/CbgyguKR2ha2EAE/review';
+let googleReviewUrl='https://search.google.com/local/writereview?placeid=ChIJrc_l_1JtcVMRuDKC4pHaFrY';
 fetch(`${API}/api/site-config`).then(r=>r.json()).then(cfg=>{if(cfg.googleReviewUrl)googleReviewUrl=cfg.googleReviewUrl;}).catch(()=>{});
 async function init(){
   if(!token){document.getElementById('svc-tag').textContent='Invalid link';return;}
@@ -77,7 +77,6 @@ async function init(){
     const d=await r.json();
     document.getElementById('greeting').textContent=`Hey ${d.customerName.split(' ')[0]}!`;
     document.getElementById('svc-tag').textContent=d.serviceName;
-    if(d.alreadyReviewed){document.getElementById('form-screen').style.display='none';document.getElementById('done-screen').style.display='block';document.getElementById('done-title').textContent='Already submitted';document.getElementById('done-sub').textContent="You've already reviewed this visit. Thanks!";}
   }catch{document.getElementById('svc-tag').textContent='Could not load';}
 }
 document.querySelectorAll('.star').forEach(s=>{
