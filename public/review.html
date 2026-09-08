@@ -67,7 +67,7 @@ const labels=['','Disappointing','Could be better','It was okay','Really good!',
 // Known-good link available immediately, so a star tap never waits on a
 // network round-trip to redirect. Refreshed in the background in case the
 // owner has changed it in Site Editor since this page was last deployed.
-let googleReviewUrl='https://search.google.com/local/writereview?placeid=ChIJrc_l_1JtcVMRuDKC4pHaFrY';
+let googleReviewUrl='https://www.google.com/maps/place/?q=place_id:ChIJrc_l_1JtcVMRuDKC4pHaFrY';
 fetch(`${API}/api/site-config`).then(r=>r.json()).then(cfg=>{if(cfg.googleReviewUrl)googleReviewUrl=cfg.googleReviewUrl;}).catch(()=>{});
 async function init(){
   if(!token){document.getElementById('svc-tag').textContent='Invalid link';return;}

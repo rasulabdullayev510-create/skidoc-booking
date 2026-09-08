@@ -38,10 +38,11 @@ db.defaults({
       facebook: "https://www.facebook.com/profile.php?id=61582680415253",
       google: "https://share.google/zg5XRvdmsyLY3mBix",
     },
-    // Direct "write a review" link — 4-5 star review-page taps redirect here.
-    // Direct write-review link (skips the g.page short-link's extra
-    // redirect hop through a Google sign-in interstitial).
-    googleReviewUrl: "https://search.google.com/local/writereview?placeid=ChIJrc_l_1JtcVMRuDKC4pHaFrY",
+    // 4-5 star review-page taps redirect here. Plain Maps listing link —
+    // loads with a clean 200 and no forced sign-in wall, unlike the
+    // writereview endpoint which was producing raw browser errors on some
+    // phones straight from the SMS link.
+    googleReviewUrl: "https://www.google.com/maps/place/?q=place_id:ChIJrc_l_1JtcVMRuDKC4pHaFrY",
     hero: {
       headline: "Trust Your Turn",
       subtitle: "Fast, affordable, and expert ski & snowboard tuning to keep your gear in peak condition.",
@@ -76,8 +77,13 @@ db.defaults({
 // later never reaches an already-existing siteConfig. Backfill those explicitly.
 (function backfillSiteConfig() {
   const cfg = db.get("siteConfig").value() || {};
-  if (cfg.googleReviewUrl === undefined) {
-    db.set("siteConfig.googleReviewUrl", "https://search.google.com/local/writereview?placeid=ChIJrc_l_1JtcVMRuDKC4pHaFrY").write();
+  const staleLinks = [
+    undefined,
+    "https://g.page/r/CbgyguKR2ha2EAE/review",
+    "https://search.google.com/local/writereview?placeid=ChIJrc_l_1JtcVMRuDKC4pHaFrY",
+  ];
+  if (staleLinks.includes(cfg.googleReviewUrl)) {
+    db.set("siteConfig.googleReviewUrl", "https://www.google.com/maps/place/?q=place_id:ChIJrc_l_1JtcVMRuDKC4pHaFrY").write();
   }
 })();
 
