@@ -156,7 +156,7 @@ async function sendCustomerOffer(booking, suggestedDate, suggestedTime) {
 async function sendReviewSMS(booking) {
   if (!twilioClient) { console.log(`[SMS SKIPPED] Review for ${booking.customerName}`); return; }
   await twilioClient.messages.create({
-    body: `Hi ${booking.customerName}! How was your experience at ${bizName()}?\n\nTap to rate (20 sec): ${getSurveyUrl(booking.reviewToken)}`,
+    body: `Hi ${booking.customerName}! How was your experience at ${bizName()}? Your feedback helps us out tremendously.\n\nTap to rate (20 sec): ${getSurveyUrl(booking.reviewToken)}`,
     from: TWILIO_PHONE_NUMBER,
     to: booking.phone,
   });
