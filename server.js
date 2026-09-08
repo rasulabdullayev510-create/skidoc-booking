@@ -38,11 +38,11 @@ db.defaults({
       facebook: "https://www.facebook.com/profile.php?id=61582680415253",
       google: "https://share.google/zg5XRvdmsyLY3mBix",
     },
-    // 4-5 star review-page taps redirect here. Plain Maps listing link —
-    // loads with a clean 200 and no forced sign-in wall, unlike the
-    // writereview endpoint which was producing raw browser errors on some
-    // phones straight from the SMS link.
-    googleReviewUrl: "https://www.google.com/maps/place/?q=place_id:ChIJrc_l_1JtcVMRuDKC4pHaFrY",
+    // 4-5 star review-page taps redirect here. Text search via Maps'
+    // documented api=1 search URL — verified (not guessed) to surface
+    // this exact business; every place_id/CID extraction attempt so far
+    // has resolved to the wrong listing or nothing at all.
+    googleReviewUrl: "https://www.google.com/maps/search/?api=1&query=Ski+Doc+Calgary+26+Val+Gardena+View+SW+Calgary+AB",
     hero: {
       headline: "Trust Your Turn",
       subtitle: "Fast, affordable, and expert ski & snowboard tuning to keep your gear in peak condition.",
@@ -81,9 +81,11 @@ db.defaults({
     undefined,
     "https://g.page/r/CbgyguKR2ha2EAE/review",
     "https://search.google.com/local/writereview?placeid=ChIJrc_l_1JtcVMRuDKC4pHaFrY",
+    "https://www.google.com/maps/place/?q=place_id:ChIJrc_l_1JtcVMRuDKC4pHaFrY",
+    "https://www.google.com/maps?cid=13120914884495815352",
   ];
   if (staleLinks.includes(cfg.googleReviewUrl)) {
-    db.set("siteConfig.googleReviewUrl", "https://www.google.com/maps/place/?q=place_id:ChIJrc_l_1JtcVMRuDKC4pHaFrY").write();
+    db.set("siteConfig.googleReviewUrl", "https://www.google.com/maps/search/?api=1&query=Ski+Doc+Calgary+26+Val+Gardena+View+SW+Calgary+AB").write();
   }
 })();
 
@@ -203,8 +205,9 @@ async function sendCustomerOffer(booking, suggestedDate, suggestedTime) {
 
 async function sendReviewSMS(booking) {
   if (!twilioClient) { console.log(`[SMS SKIPPED] Review for ${booking.customerName}`); return; }
+  const firstName = (booking.customerName || "there").trim().split(" ")[0];
   await twilioClient.messages.create({
-    body: `Hi ${booking.customerName}! How was your experience at ${bizName()}? Your feedback helps us out tremendously.\n\nTap to rate (20 sec): ${getSurveyUrl(booking.reviewToken)}`,
+    body: `Hi ${firstName}! How was your experience at ${bizName()}? Your feedback helps us out tremendously.\n\nTap to rate (20 sec): ${getSurveyUrl(booking.reviewToken)}`,
     from: TWILIO_PHONE_NUMBER,
     to: booking.phone,
   });
