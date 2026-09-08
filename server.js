@@ -672,23 +672,6 @@ app.post("/api/winback", async (req, res) => {
   catch (err) { console.error(`✗ Winback SMS failed:`, err.message); res.status(500).json({ error: "Failed to send" }); }
 });
 
-app.post("/api/gear-ready", async (req, res) => {
-  if (req.query.password !== ADMIN_PASSWORD) return res.status(401).json({ error: "Unauthorized" });
-  const { phone, customerName, time } = req.body;
-  if (!phone) return res.status(400).json({ error: "Phone required" });
-  if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(time || "")) return res.status(400).json({ error: "Valid pickup time required" });
-  if (!twilioClient) return res.status(400).json({ error: "SMS not configured" });
-  const firstName = (customerName || "there").trim().split(" ")[0];
-  try {
-    await twilioClient.messages.create({
-      body: `Hi ${firstName}! Your gear is all tuned up and ready for pickup, would you be able to come by at ${formatTime(time)}?`,
-      from: TWILIO_PHONE_NUMBER,
-      to: phone,
-    });
-    res.json({ success: true });
-  } catch (err) { console.error(`✗ Gear-ready SMS failed:`, err.message); res.status(500).json({ error: "Failed to send" }); }
-});
-
 app.post("/api/send-review", async (req, res) => {
   if (req.query.password !== ADMIN_PASSWORD) return res.status(401).json({ error: "Unauthorized" });
   const { phone, customerName } = req.body;
