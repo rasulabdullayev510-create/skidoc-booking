@@ -224,7 +224,7 @@ body{background:var(--bg);color:var(--ink);font-family:'Plus Jakarta Sans',sans-
     <div class="form-grid">
       <div class="field"><label>Full Name *</label><input type="text" id="inp-name" placeholder="Alex Johnson" autocomplete="name" oninput="queueCustomerCheck()"/></div>
       <div class="field"><label>Phone Number *</label><input type="tel" id="inp-phone" placeholder="+1 (403) 555-0123" autocomplete="tel" inputmode="tel" oninput="queueCustomerCheck()"/></div>
-      <div class="field form-full"><label>Email Address</label><input type="email" id="inp-email" placeholder="alex@email.com (optional)" autocomplete="email"/></div>
+      <div class="field form-full"><label>Email Address *</label><input type="email" id="inp-email" placeholder="alex@email.com" autocomplete="email"/></div>
     </div>
     <div id="welcome-back" class="welcome-back" style="display:none"></div>
     <div class="btn-row">
@@ -492,11 +492,14 @@ async function checkReturningCustomer(name, phone) {
 function continueFromDetails() {
   const name = document.getElementById('inp-name').value.trim();
   const phone = document.getElementById('inp-phone').value.trim();
+  const email = document.getElementById('inp-email').value.trim();
+  const emailOk = /^\S+@\S+\.\S+$/.test(email);
   document.getElementById('inp-name').classList.toggle('err', !name);
   document.getElementById('inp-phone').classList.toggle('err', !phone);
-  if (!name || !phone) return;
+  document.getElementById('inp-email').classList.toggle('err', !emailOk);
+  if (!name || !phone || !emailOk) return;
   state.name = name; state.phone = phone;
-  state.email = document.getElementById('inp-email').value.trim();
+  state.email = email;
   updateSum();
   goStep(4);
 }

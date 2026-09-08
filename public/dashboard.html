@@ -330,6 +330,13 @@ function isMobileBooking(b) { return b.location === 'mobile'; }
 function escapeHtml(s) { return (s || '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
 // Customer-typed booking notes, rendered as a small note line wherever a booking is shown.
 function notesLine(b) { return b.notes ? `<div style="font-size:11px;color:var(--text3);margin-top:4px;font-style:italic">📝 ${escapeHtml(b.notes)}</div>` : ''; }
+// Phone and, when the customer gave one, email — shown together wherever contact info appears.
+function contactLine(b) {
+  const parts = [];
+  if (b.phone) parts.push(b.phone);
+  if (b.email) parts.push(escapeHtml(b.email));
+  return parts.length ? parts.join(' · ') : '—';
+}
 function addressFor(b) {
   if (isMobileBooking(b)) return b.address || '';
   const loc = locationsList.find((l) => l.id === b.location);
@@ -559,7 +566,7 @@ function renderSchedule() {
     ? `<div class="mob-cards-wrap">${upcoming.length ? upcoming.map((b) => `<div class="mob-card">
           <div class="mob-card-top"><span class="mob-card-date">${fmtDate(b.date)} · ${fmt12(b.time)}</span><span style="color:var(--green);font-weight:700;font-size:15px">$${b.servicePrice}</span></div>
           <div class="mob-card-name">${b.customerName}</div>
-          <div class="mob-card-sub">${b.phone || '—'}</div>
+          <div class="mob-card-sub">${contactLine(b)}</div>
           <div class="mob-card-meta">${b.serviceName}<br>${typeBadge(b)}</div>
           ${notesLine(b)}
           <div class="mob-card-actions">
@@ -572,7 +579,7 @@ function renderSchedule() {
         <tbody>${upcoming.length ? upcoming.map((b) => `<tr>
           <td style="font-weight:600;color:var(--primary)">${fmtDate(b.date)}</td>
           <td style="color:var(--text2)">${fmt12(b.time)}</td>
-          <td><div style="font-weight:600">${b.customerName}</div><div style="font-size:11px;color:var(--text3)">${b.phone || ''}</div></td>
+          <td><div style="font-weight:600">${b.customerName}</div><div style="font-size:11px;color:var(--text3)">${contactLine(b)}</div></td>
           <td style="color:var(--text2)">${b.serviceName}${notesLine(b)}</td>
           <td>${typeBadge(b)}</td>
           <td style="font-weight:700;color:var(--green)">$${b.servicePrice}</td>
@@ -660,7 +667,7 @@ function renderBookings(filter) {
         return `<div class="mob-card">
           <div class="mob-card-top"><div style="display:flex;gap:6px;flex-wrap:wrap">${statusBadge}${sourceBadge}</div><span style="font-family:monospace;font-size:11px;color:var(--text3)">#${b.shortId || b.id.slice(-6)}</span></div>
           <div class="mob-card-name">${b.customerName}</div>
-          <div class="mob-card-sub">${b.phone || '—'}</div>
+          <div class="mob-card-sub">${contactLine(b)}</div>
           <div class="mob-card-meta">${b.serviceName}<br>${typeBadge(b)}<br>${b.date} · ${fmt12(b.time)} · <span style="color:var(--green);font-weight:700">$${b.servicePrice}</span>${tipLine}</div>
           ${notesLine(b)}
           ${b.status === 'confirmed' ? `<div class="mob-card-actions">
@@ -681,7 +688,7 @@ function renderBookings(filter) {
               </div>` : '';
           return `<tr>
           <td style="font-family:monospace;font-size:11px;color:var(--text3)">${b.shortId || b.id.slice(-6)}</td>
-          <td><div style="font-weight:600">${b.customerName}</div><div style="font-size:11px;color:var(--text3)">${b.phone || '—'}</div></td>
+          <td><div style="font-weight:600">${b.customerName}</div><div style="font-size:11px;color:var(--text3)">${contactLine(b)}</div></td>
           <td style="color:var(--text2)">${b.serviceName}${notesLine(b)}</td>
           <td>${typeBadge(b)}</td>
           <td style="color:var(--text2)">${b.date}</td>
@@ -711,7 +718,7 @@ function renderClients() {
     const digits = b.phone ? b.phone.replace(/\D/g, '') : '';
     const key = digits ? digits.slice(-10) : '__' + b.customerName.toLowerCase().trim();
     if (!clientMap[key]) {
-      clientMap[key] = { name: b.customerName, phone: b.phone || '—', visits: 0, noshowCount: 0, totalSpent: 0, services: {}, firstVisit: b.date, lastVisit: b.date, onlineCount: 0, manualCount: 0, mobileCount: 0, inShopCount: 0, latestConfirmedId: null, latestConfirmedDate: null, latestNotes: null };
+      clientMap[key] = { name: b.customerName, phone: b.phone || '—', email: b.email || null, visits: 0, noshowCount: 0, totalSpent: 0, services: {}, firstVisit: b.date, lastVisit: b.date, onlineCount: 0, manualCount: 0, mobileCount: 0, inShopCount: 0, latestConfirmedId: null, latestConfirmedDate: null, latestNotes: null };
     }
     const c = clientMap[key];
     if (b.status === 'confirmed') {
@@ -741,7 +748,7 @@ function renderClients() {
             <div class="mob-card-top">
               <div style="display:flex;align-items:center;gap:10px">
                 <div style="width:36px;height:36px;border-radius:50%;background:${isNoShowOnly ? 'var(--red-bg)' : 'var(--bg4)'};display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:${isNoShowOnly ? 'var(--red)' : 'var(--text)'};flex-shrink:0">${c.name[0].toUpperCase()}</div>
-                <div><div style="font-weight:700;font-size:15px">${c.name}${isNoShowOnly ? ` <span style="background:rgba(239,68,68,0.12);color:var(--red);font-size:10px;font-weight:700;padding:2px 7px;border-radius:5px">NO SHOW</span>` : ''}</div><div style="font-size:12px;color:var(--text3)">${c.phone}</div></div>
+                <div><div style="font-weight:700;font-size:15px">${c.name}${isNoShowOnly ? ` <span style="background:rgba(239,68,68,0.12);color:var(--red);font-size:10px;font-weight:700;padding:2px 7px;border-radius:5px">NO SHOW</span>` : ''}</div><div style="font-size:12px;color:var(--text3)">${c.phone}${c.email ? ' · ' + escapeHtml(c.email) : ''}</div></div>
               </div>
               <div style="text-align:right">
                 <div style="font-weight:700;font-size:16px;color:${isNoShowOnly ? 'var(--text3)' : 'var(--green)'}">${isNoShowOnly ? '—' : '$' + c.totalSpent.toLocaleString()}</div>
@@ -750,6 +757,7 @@ function renderClients() {
             </div>
             ${!isNoShowOnly ? `<div class="mob-card-meta" style="margin-top:6px">${topService ? topService[0] + ' · ' : ''}${sourceLabel}<br>${c.mobileCount > 0 && c.inShopCount > 0 ? `📍 ${c.inShopCount}× In-Shop · 🚗 ${c.mobileCount}× Mobile` : c.mobileCount > 0 ? '🚗 Mobile' : '📍 In-Shop'} · Last: ${fmtDate(c.lastVisit)}</div>${notesLine({ notes: c.latestNotes })}` : ''}
             <div class="mob-card-actions">
+              ${c.phone !== '—' ? `<button onclick="openGearReadyModal('${c.phone}','${c.name.replace(/'/g,"\\'")}')" style="padding:7px 14px;border-radius:8px;border:1.5px solid var(--green);background:var(--green-bg);color:var(--green);font-family:inherit;font-size:12px;font-weight:700;cursor:pointer">🎿 Gear Ready</button>` : ''}
               ${c.phone !== '—' ? `<button onclick="sendWinback('${c.phone}','${c.name.replace(/'/g,"\\'")}',this)" style="padding:7px 14px;border-radius:8px;border:1.5px solid var(--primary);background:var(--primary-glow);color:var(--primary);font-family:inherit;font-size:12px;font-weight:700;cursor:pointer">📲 Win-Back</button>` : ''}
               ${c.phone !== '—' ? `<button onclick="sendReview('${c.phone}','${c.name.replace(/'/g,"\\'")}',this)" style="padding:7px 14px;border-radius:8px;border:1.5px solid var(--yellow);background:var(--yellow-bg);color:var(--yellow);font-family:inherit;font-size:12px;font-weight:700;cursor:pointer">⭐ Review</button>` : ''}
               ${c.latestConfirmedId ? `<button onclick="markNoShow('${c.latestConfirmedId}')" style="padding:7px 14px;border-radius:8px;border:1.5px solid var(--red);background:var(--red-bg);color:var(--red);font-family:inherit;font-size:12px;font-weight:700;cursor:pointer">No-Show</button>` : ''}
@@ -772,7 +780,7 @@ function renderClients() {
             : `<span style="background:rgba(59,130,246,0.1);color:var(--primary);font-size:10px;font-weight:700;padding:3px 8px;border-radius:6px">📍 In-Shop</span>`;
           return `<tr style="${isNoShowOnly ? 'opacity:0.65' : ''}">
             <td style="color:var(--text3);font-size:12px">${i + 1}</td>
-            <td><div style="display:flex;align-items:center;gap:10px"><div style="width:34px;height:34px;border-radius:50%;background:${isNoShowOnly ? 'var(--red-bg)' : 'var(--bg4)'};display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:${isNoShowOnly ? 'var(--red)' : 'var(--text)'};flex-shrink:0">${c.name[0].toUpperCase()}</div><div><div style="font-weight:600;display:flex;align-items:center;gap:6px">${c.name}${isNoShowOnly ? ` <span style="background:rgba(239,68,68,0.12);color:var(--red);font-size:10px;font-weight:700;padding:2px 7px;border-radius:5px">NO SHOW</span>` : ''}</div><div style="font-size:11px;color:var(--text3)">${c.phone}</div></div></div></td>
+            <td><div style="display:flex;align-items:center;gap:10px"><div style="width:34px;height:34px;border-radius:50%;background:${isNoShowOnly ? 'var(--red-bg)' : 'var(--bg4)'};display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:${isNoShowOnly ? 'var(--red)' : 'var(--text)'};flex-shrink:0">${c.name[0].toUpperCase()}</div><div><div style="font-weight:600;display:flex;align-items:center;gap:6px">${c.name}${isNoShowOnly ? ` <span style="background:rgba(239,68,68,0.12);color:var(--red);font-size:10px;font-weight:700;padding:2px 7px;border-radius:5px">NO SHOW</span>` : ''}</div><div style="font-size:11px;color:var(--text3)">${c.phone}${c.email ? ' · ' + escapeHtml(c.email) : ''}</div></div></div></td>
             <td>${isNoShowOnly ? `<span style="background:rgba(239,68,68,0.12);color:var(--red);font-size:10px;font-weight:700;padding:3px 8px;border-radius:6px">${c.noshowCount}× No-Show</span>` : `<div style="display:flex;align-items:center;gap:6px"><span style="font-weight:700;color:${isRepeat ? 'var(--primary)' : 'var(--text)'}">${c.visits}</span>${isRepeat ? `<span style="background:var(--primary-glow);color:var(--primary);font-size:10px;font-weight:700;padding:2px 7px;border-radius:5px;letter-spacing:0.05em">REPEAT</span>` : ''}</div>`}</td>
             <td style="font-weight:700;color:${isNoShowOnly ? 'var(--text3)' : 'var(--green)'};font-size:15px">${isNoShowOnly ? '—' : '$' + c.totalSpent.toLocaleString()}</td>
             <td>${isNoShowOnly ? '—' : `<span style="background:${sourceBgColor};color:${sourceBadgeColor};font-size:11px;font-weight:700;padding:3px 9px;border-radius:6px;letter-spacing:0.04em">${sourceLabel}</span>`}</td>
@@ -781,6 +789,7 @@ function renderClients() {
             <td style="color:var(--text3);font-size:12px">${fmtDate(c.firstVisit)}</td>
             <td style="color:${c.lastVisit === new Date().toISOString().split('T')[0] ? 'var(--green)' : 'var(--text3)'};font-size:12px">${fmtDate(c.lastVisit)}</td>
             <td><div style="display:flex;flex-direction:column;gap:6px">
+              ${c.phone !== '—' ? `<button onclick="openGearReadyModal('${c.phone}','${c.name.replace(/'/g,"\\'")}')" style="padding:5px 11px;border-radius:7px;border:1.5px solid var(--green);background:var(--green-bg);color:var(--green);font-family:inherit;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap">🎿 Gear Ready</button>` : ''}
               ${c.phone !== '—' ? `<button onclick="sendWinback('${c.phone}','${c.name.replace(/'/g,"\\'")}',this)" style="padding:5px 11px;border-radius:7px;border:1.5px solid var(--primary);background:var(--primary-glow);color:var(--primary);font-family:inherit;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap">📲 Win-Back</button>` : ''}
               ${c.phone !== '—' ? `<button onclick="sendReview('${c.phone}','${c.name.replace(/'/g,"\\'")}',this)" style="padding:5px 11px;border-radius:7px;border:1.5px solid var(--yellow);background:var(--yellow-bg);color:var(--yellow);font-family:inherit;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap">⭐ Review</button>` : ''}
               ${c.latestConfirmedId ? `<button onclick="markNoShow('${c.latestConfirmedId}')" style="padding:5px 11px;border-radius:7px;border:1.5px solid var(--red);background:var(--red-bg);color:var(--red);font-family:inherit;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap">No-Show</button>` : ''}
@@ -788,7 +797,68 @@ function renderClients() {
           </tr>`;
         }).join('') : '<tr><td colspan="10" style="text-align:center;color:var(--text3);padding:40px">No clients yet</td></tr>'}
         </tbody></table>`}
+    </div>
+    <div id="gear-ready-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:1000;align-items:center;justify-content:center;padding:20px" onclick="if(event.target===this)closeGearReadyModal()">
+      <div style="background:var(--bg2);border:1px solid var(--border2);border-radius:14px;padding:28px;max-width:360px;width:100%">
+        <h3 style="margin-bottom:4px">Gear Ready for Pickup</h3>
+        <p style="font-size:13px;color:var(--text3);margin-bottom:18px" id="gear-ready-name"></p>
+        <div class="field"><label>Pickup Time</label>
+          <select id="gear-ready-time">${gearReadyTimeOptions()}</select>
+        </div>
+        <div style="margin-top:20px;display:flex;gap:10px">
+          <button class="btn-sm" style="background:var(--bg3);color:var(--text)" onclick="closeGearReadyModal()">Cancel</button>
+          <button class="btn-sm" style="background:var(--green)" onclick="confirmGearReady()">Confirm &amp; Send</button>
+        </div>
+        <div class="form-msg" id="gear-ready-msg"></div>
+      </div>
     </div>`;
+}
+
+let gearReadyTarget = null;
+function gearReadyTimeOptions() {
+  let html = '';
+  for (let h = 0; h < 24; h++) {
+    for (const m of [0, 30]) {
+      const value = String(h).padStart(2, '0') + ':' + String(m).padStart(2, '0');
+      const hr12 = h % 12 === 0 ? 12 : h % 12;
+      const label = hr12 + ':' + String(m).padStart(2, '0') + ' ' + (h < 12 ? 'AM' : 'PM');
+      html += `<option value="${value}"${value === '12:00' ? ' selected' : ''}>${label}</option>`;
+    }
+  }
+  return html;
+}
+function openGearReadyModal(phone, name) {
+  gearReadyTarget = { phone, name };
+  document.getElementById('gear-ready-name').textContent = name + ' · ' + phone;
+  const msg = document.getElementById('gear-ready-msg');
+  msg.style.display = 'none'; msg.textContent = '';
+  document.getElementById('gear-ready-modal').style.display = 'flex';
+}
+function closeGearReadyModal() {
+  document.getElementById('gear-ready-modal').style.display = 'none';
+  gearReadyTarget = null;
+}
+async function confirmGearReady() {
+  if (!gearReadyTarget) return;
+  const time = document.getElementById('gear-ready-time').value;
+  const btn = document.querySelector('[onclick="confirmGearReady()"]');
+  const msg = document.getElementById('gear-ready-msg');
+  btn.textContent = 'Sending...'; btn.disabled = true;
+  try {
+    const r = await fetch(API + '/api/gear-ready?password=' + encodeURIComponent(pwd), {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ phone: gearReadyTarget.phone, customerName: gearReadyTarget.name, time }),
+    });
+    const d = await r.json();
+    msg.style.display = 'block';
+    if (d.success) {
+      msg.className = 'form-msg ok'; msg.textContent = '✓ Text sent!';
+      setTimeout(closeGearReadyModal, 1200);
+    } else {
+      msg.className = 'form-msg fail'; msg.textContent = d.error || 'Failed.';
+    }
+  } catch (e) { msg.style.display = 'block'; msg.className = 'form-msg fail'; msg.textContent = 'Connection error.'; }
+  btn.textContent = 'Confirm & Send'; btn.disabled = false;
 }
 
 // ── Manual Entry ─────────────────────────────────────────────
@@ -831,7 +901,7 @@ function renderManualEntry() {
       <div class="table-head"><span class="table-head-title">Manually Logged Bookings</span></div>
       ${window.innerWidth < 640
         ? `<div class="mob-cards-wrap">${manualBookings.length ? manualBookings.map((b) => `<div class="mob-card">
-              <div class="mob-card-top"><div><div class="mob-card-name">${b.customerName}</div><div class="mob-card-sub">${b.phone || '—'}</div></div><span style="color:var(--green);font-weight:700;font-size:15px">$${b.servicePrice}</span></div>
+              <div class="mob-card-top"><div><div class="mob-card-name">${b.customerName}</div><div class="mob-card-sub">${contactLine(b)}</div></div><span style="color:var(--green);font-weight:700;font-size:15px">$${b.servicePrice}</span></div>
               <div class="mob-card-meta">${b.serviceName} · ${b.date}</div>
               <div class="mob-card-actions"><span style="font-size:12px;color:var(--text3)">Review SMS:</span><span class="badge ${b.reviewSentAt ? 'badge-confirmed' : 'badge-pending'}">${b.reviewSentAt ? 'Sent' : '—'}</span></div>
             </div>`).join('') : '<div class="mob-empty">No manual entries yet</div>'}</div>`

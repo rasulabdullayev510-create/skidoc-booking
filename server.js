@@ -4,6 +4,8 @@ const FileSync = require("lowdb/adapters/FileSync");
 const twilio = require("twilio");
 const crypto = require("crypto");
 const path = require("path");
+const fs = require("fs");
+const cron = require("node-cron");
 const cors = require("cors");
 
 require("dotenv").config();
@@ -130,8 +132,9 @@ async function sendCustomerConfirmation(booking) {
   });
   if (OWNER_PHONE) {
     const notesLine = booking.notes ? `\nNotes: ${booking.notes}` : "";
+    const emailLine = booking.email ? `\nEmail: ${booking.email}` : "";
     await twilioClient.messages.create({
-      body: `New booking! ${booking.customerName} — ${booking.serviceName}\nWhere: ${where}\n${booking.date} at ${formatTime(booking.time)}\nPhone: ${booking.phone}${notesLine}`,
+      body: `New booking! ${booking.customerName} — ${booking.serviceName}\nWhere: ${where}\n${booking.date} at ${formatTime(booking.time)}\nPhone: ${booking.phone}${emailLine}${notesLine}`,
       from: TWILIO_PHONE_NUMBER,
       to: OWNER_PHONE,
     });
@@ -346,8 +349,10 @@ app.post("/api/bookings", async (req, res) => {
     return res.status(400).json({ error: "Address is required for mobile service" });
   if (!Array.isArray(items) || !items.length)
     return res.status(400).json({ error: "Select at least one service" });
-  if (!date || !time || !customerName || !phone)
+  if (!date || !time || !customerName || !phone || !(email || "").trim())
     return res.status(400).json({ error: "Missing required fields" });
+  if (!/^\S+@\S+\.\S+$/.test(email.trim()))
+    return res.status(400).json({ error: "Enter a valid email address" });
 
   // Resolve services & prices server-side — never trust client-submitted prices.
   const resolvedItems = [];
@@ -635,6 +640,22 @@ app.post("/api/winback", async (req, res) => {
   catch (err) { console.error(`✗ Winback SMS failed:`, err.message); res.status(500).json({ error: "Failed to send" }); }
 });
 
+app.post("/api/gear-ready", async (req, res) => {
+  if (req.query.password !== ADMIN_PASSWORD) return res.status(401).json({ error: "Unauthorized" });
+  const { phone, customerName, time } = req.body;
+  if (!phone) return res.status(400).json({ error: "Phone required" });
+  if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(time || "")) return res.status(400).json({ error: "Valid pickup time required" });
+  if (!twilioClient) return res.status(400).json({ error: "SMS not configured" });
+  try {
+    await twilioClient.messages.create({
+      body: `Hi ${customerName || "there"}! Your gear is all tuned up and ready for pickup, would you be able to come by at ${formatTime(time)}?`,
+      from: TWILIO_PHONE_NUMBER,
+      to: phone,
+    });
+    res.json({ success: true });
+  } catch (err) { console.error(`✗ Gear-ready SMS failed:`, err.message); res.status(500).json({ error: "Failed to send" }); }
+});
+
 app.post("/api/send-review", async (req, res) => {
   if (req.query.password !== ADMIN_PASSWORD) return res.status(401).json({ error: "Unauthorized" });
   const { phone, customerName } = req.body;
@@ -800,6 +821,32 @@ app.get("*", (req, res) => res.sendFile(path.join(__dirname, "public", "index.ht
 
 // Review SMS is sent manually from the admin dashboard (Clients page →
 // Review button) via /api/send-review — no automatic cron firing on its own.
+
+// Morning system check — 8am Calgary time, daily. Confirms the website is
+// reachable, the persistent data disk is writable, and the database is
+// readable, then texts the owner a summary either way.
+cron.schedule("0 8 * * *", async () => {
+  if (!twilioClient || !OWNER_PHONE) return;
+  const issues = [];
+
+  try {
+    const r = await fetch("https://skidocyyc.ca/", { signal: AbortSignal.timeout(8000) });
+    if (!r.ok) issues.push(`Website returned status ${r.status}`);
+  } catch (e) { issues.push("Website is unreachable"); }
+
+  try {
+    if (DATA_DIR !== __dirname) fs.accessSync(DATA_DIR, fs.constants.W_OK);
+  } catch (e) { issues.push("Data disk isn't writable — settings may not be saving"); }
+
+  try { db.get("bookings").value(); }
+  catch (e) { issues.push("Database read failed"); }
+
+  const body = issues.length
+    ? `⚠️ Ski Doc system check found an issue:\n${issues.join("\n")}`
+    : `Good morning! All Ski Doc systems are up and running smoothly. Happy grinding! 🎿`;
+  try { await twilioClient.messages.create({ body, from: TWILIO_PHONE_NUMBER, to: OWNER_PHONE }); }
+  catch (err) { console.error(`✗ Morning system check SMS failed:`, err.message); }
+}, { timezone: "America/Edmonton" });
 
 app.listen(PORT, () => {
   console.log(`\n🏔  Ski Doc Calgary — Booking System`);
