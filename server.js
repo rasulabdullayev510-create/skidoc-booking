@@ -156,7 +156,7 @@ async function sendCustomerOffer(booking, suggestedDate, suggestedTime) {
 async function sendReviewSMS(booking) {
   if (!twilioClient) { console.log(`[SMS SKIPPED] Review for ${booking.customerName}`); return; }
   await twilioClient.messages.create({
-    body: `Hi ${booking.customerName}! How was your experience at ${bizName()}? Takes 20 seconds: ${getSurveyUrl(booking.reviewToken)}`,
+    body: `Hi ${booking.customerName}! How was your experience at ${bizName()}?\n\nTap to rate (20 sec): ${getSurveyUrl(booking.reviewToken)}`,
     from: TWILIO_PHONE_NUMBER,
     to: booking.phone,
   });
@@ -165,9 +165,9 @@ async function sendReviewSMS(booking) {
 // SMS to a past customer — invite them back
 async function sendWinbackSMS(phone, name) {
   if (!twilioClient) { console.log(`[SMS SKIPPED] Winback for ${name}`); return; }
-  const phoneLine = bizPhone() ? ` or call/text us at ${bizPhone()}` : '';
+  const phoneLine = bizPhone() ? `\nCall/text: ${bizPhone()}` : '';
   await twilioClient.messages.create({
-    body: `Hi ${name}! It's been a while since your last tune at ${bizName()} — edges dull and bases dry out over time, so let's get your gear back in top condition before you're out on the hill again. Book online at https://skidocyyc.ca/book${phoneLine}. See you soon!`,
+    body: `Hi ${name}, it's been a while since your last tune at Ski Doc, let's get your gear back in peak condition before your next day out.\n\nBook online: https://skidocyyc.ca/book${phoneLine}\n\nSee you soon!`,
     from: TWILIO_PHONE_NUMBER,
     to: phone,
   });
