@@ -14,6 +14,11 @@ app.use(express.urlencoded({ extended: false }));
 app.use(express.json());
 app.use(express.static(path.join(__dirname, "public")));
 
+// Health check — set this as Render's Health Check Path so it waits for
+// the new instance to actually be ready before cutting traffic over,
+// instead of the brief 502 window during a deploy.
+app.get("/healthz", (req, res) => res.status(200).send("ok"));
+
 // DATA_DIR points at Render's persistent disk mount (set via env var) so
 // db.json survives redeploys instead of resetting to defaults every time.
 // Falls back to the project directory for local dev, where there's no disk.
