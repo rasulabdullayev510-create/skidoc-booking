@@ -148,7 +148,9 @@ function customerLocationLine(booking) {
 }
 // Owner-facing: just the location name — they already know the addresses.
 function ownerLocationLine(booking) {
-  if (booking.location === 'mobile') return 'Mobile';
+  // Mobile jobs need the actual address so the owner knows where to drive —
+  // in-shop bookings just need the name since the owner already knows those.
+  if (booking.location === 'mobile') return `Mobile — ${booking.address}`;
   const loc = getLocations().find((l) => l.id === booking.location);
   return loc ? loc.name : booking.location;
 }

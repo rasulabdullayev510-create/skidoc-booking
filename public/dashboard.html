@@ -344,9 +344,13 @@ function addressFor(b) {
 }
 function typeBadge(b) {
   const addr = addressFor(b);
+  // Look up the location's *current* name live — b.locationName is frozen
+  // at booking time and goes stale if the location gets renamed later.
+  const loc = locationsList.find((l) => l.id === b.location);
+  const liveName = (loc && loc.name) || b.locationName || 'In-Shop';
   const pill = isMobileBooking(b)
     ? `<span style="background:rgba(245,158,11,0.12);color:var(--yellow);font-size:10px;font-weight:700;padding:3px 8px;border-radius:6px">🚗 Mobile</span>`
-    : `<span style="background:rgba(59,130,246,0.1);color:var(--primary);font-size:10px;font-weight:700;padding:3px 8px;border-radius:6px">📍 ${b.locationName || 'In-Shop'}</span>`;
+    : `<span style="background:rgba(59,130,246,0.1);color:var(--primary);font-size:10px;font-weight:700;padding:3px 8px;border-radius:6px">📍 ${liveName}</span>`;
   return addr ? `${pill}<div style="font-size:11px;color:var(--text3);margin-top:3px">${addr}</div>` : pill;
 }
 
