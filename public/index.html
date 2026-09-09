@@ -109,6 +109,7 @@ body{background:var(--bg);color:var(--ink);font-family:'Plus Jakarta Sans',sans-
 .cal-d.today{color:var(--blue);font-weight:700}
 .cal-d.picked{background:var(--blue);color:var(--white);border-color:var(--blue)}
 .cal-d.dis{color:var(--rule2);cursor:default}
+.cal-d.unavail{color:var(--rule2);cursor:default;text-decoration:line-through}
 .cal-d.empty{cursor:default}
 .slots-lbl{font-size:11px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--ink3);margin-bottom:12px}
 .slots-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;max-height:290px;overflow-y:auto;padding-right:3px}
@@ -546,10 +547,12 @@ function renderCal() {
     const dt = new Date(y, m, d);
     const mo = String(m + 1).padStart(2, '0'), dd = String(d).padStart(2, '0');
     const ds = y + '-' + mo + '-' + dd;
+    // Pickup & Drop-off doesn't run Tuesdays or Thursdays.
+    const pdUnavailable = state.location === 'pickup-dropoff' && (dt.getDay() === 2 || dt.getDay() === 4);
     const past = dt < today, picked = ds === state.date, tdy = dt.getTime() === today.getTime();
     let cls = 'cal-d';
-    if (past) cls += ' dis'; else if (picked) cls += ' picked'; else if (tdy) cls += ' today';
-    const click = !past ? ' onclick="pickDate(\'' + ds + '\')"' : '';
+    if (past || pdUnavailable) cls += past ? ' dis' : ' unavail'; else if (picked) cls += ' picked'; else if (tdy) cls += ' today';
+    const click = (!past && !pdUnavailable) ? ' onclick="pickDate(\'' + ds + '\')"' : '';
     h += '<div class="' + cls + '"' + click + '>' + d + '</div>';
   }
   document.getElementById('cal-grid').innerHTML = h;

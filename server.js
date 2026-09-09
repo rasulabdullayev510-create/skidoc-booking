@@ -330,9 +330,15 @@ ${JSON.stringify(config, null, 2)}`;
 
 // Shared slot-window rules: weekdays are one window, Sat/Sun another;
 // mobile uses 2-hour increments, in-shop locations use 30-minute increments.
-function getWindow(dayOfWeek, isMobile) {
+// Pickup & Drop-off only runs Mon/Wed/Fri/Sat/Sun — Tue(2) and Thu(4) get an
+// empty (inverted) range, which computeSlots's loop naturally turns into zero slots.
+function getWindow(dayOfWeek, location) {
   const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
-  if (isMobile) {
+  if (location === "pickup-dropoff") {
+    if (dayOfWeek === 2 || dayOfWeek === 4) return { startMin: 0, endMin: -1, stepMin: 60 };
+    return { startMin: 18 * 60, endMin: 23 * 60, stepMin: 60 }; // 6 PM–11 PM, hourly
+  }
+  if (location === "mobile") {
     return isWeekend
       ? { startMin: 10 * 60, endMin: 22 * 60, stepMin: 120 }  // 10 AM–10 PM
       : { startMin: 17 * 60, endMin: 21 * 60, stepMin: 120 }; // 5, 7, 9 PM
@@ -352,8 +358,7 @@ function isValidLocation(location) {
 function computeSlots(date, location) {
   const [year, month, day] = date.split('-').map(Number);
   const dayOfWeek = new Date(year, month - 1, day).getDay();
-  const isMobile = location === "mobile";
-  const { startMin, endMin, stepMin } = getWindow(dayOfWeek, isMobile);
+  const { startMin, endMin, stepMin } = getWindow(dayOfWeek, location);
 
   const calNow = getCalgaryNow();
   const oneHourFromNow = new Date(calNow.getTime() + 60 * 60 * 1000);
