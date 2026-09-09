@@ -432,7 +432,11 @@ app.post("/api/bookings", async (req, res) => {
     const svc = getServices().find((s) => s.id === it.serviceId);
     if (!svc) return res.status(400).json({ error: `Unknown service: ${it.serviceId}` });
     const qty = Math.max(1, Math.min(10, Number(it.qty) || 1));
-    const unitPrice = svc.price + (isMobile ? getMobileSurcharge() : isPickupDropoff ? getPickupDropoffSurcharge() : 0);
+    // Performance Race Tune is priced at a flat $99 for pickup & drop-off
+    // specifically (not base price + surcharge) — a one-off exception.
+    const unitPrice = isPickupDropoff && svc.id === "performance-race-tune"
+      ? 99
+      : svc.price + (isMobile ? getMobileSurcharge() : isPickupDropoff ? getPickupDropoffSurcharge() : 0);
     resolvedItems.push({ serviceId: svc.id, serviceName: svc.name, unitPrice, qty });
   }
   const totalPrice = resolvedItems.reduce((sum, i) => sum + i.unitPrice * i.qty, 0);

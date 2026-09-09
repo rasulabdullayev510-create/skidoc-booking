@@ -435,7 +435,7 @@ function openDirections(address) {
 
 function priceFor(svc) {
   if (state.location === 'mobile') return svc.price + mobileSurcharge;
-  if (state.location === 'pickup-dropoff') return svc.price + pickupDropoffSurcharge;
+  if (state.location === 'pickup-dropoff') return svc.id === 'performance-race-tune' ? 99 : svc.price + pickupDropoffSurcharge;
   return svc.price;
 }
 
