@@ -55,6 +55,7 @@ db.defaults({
     mobileEnabled: true,
     mobileSurcharge: 10,
     pickupDropoffEnabled: false,
+    pickupDropoffSurcharge: 15,
     locations: [
       { id: "location-a", name: "Location A", address: "26 Val Gardena View SW, Calgary, AB T3H 5Z5", enabled: true },
       { id: "location-b", name: "Test Location", address: "Patina Dr SW, Calgary, AB", enabled: true },
@@ -91,6 +92,9 @@ db.defaults({
   if (cfg.pickupDropoffEnabled === undefined) {
     db.set("siteConfig.pickupDropoffEnabled", false).write();
   }
+  if (cfg.pickupDropoffSurcharge === undefined) {
+    db.set("siteConfig.pickupDropoffSurcharge", 15).write();
+  }
 })();
 
 function getConfig() { return db.get("siteConfig").value(); }
@@ -98,6 +102,7 @@ function getServices() { return getConfig().services; }
 function getLocations() { return getConfig().locations; }
 function getEnabledLocations() { return getLocations().filter((l) => l.enabled !== false); }
 function getMobileSurcharge() { return getConfig().mobileSurcharge; }
+function getPickupDropoffSurcharge() { return getConfig().pickupDropoffSurcharge; }
 function isMobileEnabled() { return getConfig().mobileEnabled !== false; }
 function isPickupDropoffEnabled() { return getConfig().pickupDropoffEnabled === true; }
 function bizName() { return getConfig().businessName || BUSINESS_NAME; }
@@ -233,7 +238,7 @@ async function sendWinbackSMS(phone, name) {
   });
 }
 
-app.get("/api/services", (req, res) => res.json({ services: getServices(), mobileSurcharge: getMobileSurcharge(), mobileEnabled: isMobileEnabled(), pickupDropoffEnabled: isPickupDropoffEnabled() }));
+app.get("/api/services", (req, res) => res.json({ services: getServices(), mobileSurcharge: getMobileSurcharge(), mobileEnabled: isMobileEnabled(), pickupDropoffEnabled: isPickupDropoffEnabled(), pickupDropoffSurcharge: getPickupDropoffSurcharge() }));
 app.get("/api/locations", (req, res) => res.json(req.query.all ? getLocations() : getEnabledLocations()));
 app.get("/api/info", (req, res) => res.json({ businessName: bizName() }));
 app.get("/api/site-config", (req, res) => res.json(getConfig()));
@@ -415,7 +420,7 @@ app.post("/api/bookings", async (req, res) => {
     const svc = getServices().find((s) => s.id === it.serviceId);
     if (!svc) return res.status(400).json({ error: `Unknown service: ${it.serviceId}` });
     const qty = Math.max(1, Math.min(10, Number(it.qty) || 1));
-    const unitPrice = svc.price + (isMobile ? getMobileSurcharge() : 0);
+    const unitPrice = svc.price + (isMobile ? getMobileSurcharge() : isPickupDropoff ? getPickupDropoffSurcharge() : 0);
     resolvedItems.push({ serviceId: svc.id, serviceName: svc.name, unitPrice, qty });
   }
   const totalPrice = resolvedItems.reduce((sum, i) => sum + i.unitPrice * i.qty, 0);

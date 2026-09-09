@@ -280,7 +280,7 @@ body{background:var(--bg);color:var(--ink);font-family:'Plus Jakarta Sans',sans-
 const API = /\bonrender\.com$/.test(location.hostname) || location.hostname === 'localhost'
   ? window.location.origin
   : 'https://skidoc-booking-eblt.onrender.com';
-let services = [], mobileSurcharge = 10, mobileEnabled = true, pickupDropoffEnabled = false, locations = [];
+let services = [], mobileSurcharge = 10, mobileEnabled = true, pickupDropoffEnabled = false, pickupDropoffSurcharge = 15, locations = [];
 let calMo = new Date(); calMo.setDate(1);
 
 const state = {
@@ -296,7 +296,7 @@ async function loadServices() {
   try {
     const r = await fetch(API + '/api/services');
     const data = await r.json();
-    services = data.services; mobileSurcharge = data.mobileSurcharge; mobileEnabled = data.mobileEnabled !== false; pickupDropoffEnabled = !!data.pickupDropoffEnabled;
+    services = data.services; mobileSurcharge = data.mobileSurcharge; mobileEnabled = data.mobileEnabled !== false; pickupDropoffEnabled = !!data.pickupDropoffEnabled; pickupDropoffSurcharge = data.pickupDropoffSurcharge;
     renderSvcs();
     renderLocations(); // mobileEnabled/pickupDropoffEnabled may have just changed — re-render the location cards
   } catch (e) {
@@ -433,7 +433,9 @@ function openDirections(address) {
 }
 
 function priceFor(svc) {
-  return svc.price + (state.location === 'mobile' ? mobileSurcharge : 0);
+  if (state.location === 'mobile') return svc.price + mobileSurcharge;
+  if (state.location === 'pickup-dropoff') return svc.price + pickupDropoffSurcharge;
+  return svc.price;
 }
 
 function svcCard(s, compact) {
@@ -460,8 +462,11 @@ function svcCard(s, compact) {
 
 function renderSvcs() {
   const isMobile = state.location === 'mobile';
+  const isPickupDropoff = state.location === 'pickup-dropoff';
   document.getElementById('svc-p-sub').textContent = isMobile
     ? `Mobile pricing shown below (+$${mobileSurcharge} per service).`
+    : isPickupDropoff
+    ? `Pickup & drop-off pricing shown below — the extra charge covers transportation (+$${pickupDropoffSurcharge} per service).`
     : 'Add as many as you need — quantities and multiple services are welcome.';
 
   const packages = services.filter((s) => s.category === 'package');
