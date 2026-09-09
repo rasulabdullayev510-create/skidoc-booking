@@ -673,6 +673,20 @@ async function resetTrafficData() {
   }
 }
 
+async function resetReviewsData() {
+  if (!confirm('Reset reviews data? This permanently deletes every review/rating on file and resets the average rating back to zero. Bookings, clients, and revenue are not affected. This cannot be undone.')) return;
+  const r = await fetch(API + '/api/reviews-reset?password=' + encodeURIComponent(pwd), { method: 'POST' });
+  const d = await r.json();
+  const msg = document.getElementById('reviews-reset-msg');
+  if (d.success) {
+    feedback = await (await fetch(API + '/api/feedback?password=' + encodeURIComponent(pwd))).json();
+    stats = await (await fetch(API + '/api/stats?password=' + encodeURIComponent(pwd))).json();
+    renderReviews();
+  } else {
+    msg.className = 'form-msg fail'; msg.style.display = 'block'; msg.textContent = d.error || 'Failed to reset.';
+  }
+}
+
 // ── All Bookings ─────────────────────────────────────────────
 function renderBookings(filter) {
   filter = filter || currentBookingsFilter;
@@ -1213,7 +1227,11 @@ function renderReviews() {
     </div>`).join('') : `<div style="text-align:center;color:var(--text3);padding:60px 20px;background:var(--bg3);border-radius:var(--radius)">No reviews yet — they'll appear here after customers submit feedback.</div>`;
 
   document.getElementById('main').innerHTML = `
-    <div class="page-hdr"><h1>Reviews</h1><p>Automated follow-up performance</p></div>
+    <div class="page-hdr" style="display:flex;align-items:flex-end;justify-content:space-between;gap:12px;flex-wrap:wrap">
+      <div><h1>Reviews</h1><p>Automated follow-up performance</p></div>
+      <button class="btn-sm" style="background:var(--red)" onclick="resetReviewsData()">Reset Reviews Data</button>
+    </div>
+    <div class="form-msg" id="reviews-reset-msg" style="margin-bottom:16px"></div>
     <div class="stats-row" style="grid-template-columns:repeat(3,1fr)">
       <div class="stat-card yellow"><div class="stat-lbl">Avg Rating</div><div class="stat-num yellow">${stats.avgRating || '—'}</div><div class="stat-sub">From review system</div></div>
       <div class="stat-card blue"><div class="stat-lbl">Review Rate</div><div class="stat-num blue">${stats.reviewRate}%</div><div class="stat-sub">Industry average ~8%</div></div>

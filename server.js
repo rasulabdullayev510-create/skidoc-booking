@@ -633,6 +633,13 @@ app.post("/api/traffic-reset", (req, res) => {
   res.json({ success: true });
 });
 
+app.post("/api/reviews-reset", (req, res) => {
+  if (req.query.password !== ADMIN_PASSWORD) return res.status(401).json({ error: "Unauthorized" });
+  db.set("feedback", []).write();
+  console.log(`⚠ Reviews/feedback data reset by admin`);
+  res.json({ success: true });
+});
+
 // ── Manual entry — log a phone/in-person booking directly as confirmed ──
 app.post("/api/manual-entry", async (req, res) => {
   if (req.query.password !== ADMIN_PASSWORD) return res.status(401).json({ error: "Unauthorized" });
