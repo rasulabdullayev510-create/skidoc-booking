@@ -280,7 +280,7 @@ body{background:var(--bg);color:var(--ink);font-family:'Plus Jakarta Sans',sans-
 const API = /\bonrender\.com$/.test(location.hostname) || location.hostname === 'localhost'
   ? window.location.origin
   : 'https://skidoc-booking-eblt.onrender.com';
-let services = [], mobileSurcharge = 10, mobileEnabled = true, locations = [];
+let services = [], mobileSurcharge = 10, mobileEnabled = true, pickupDropoffEnabled = false, locations = [];
 let calMo = new Date(); calMo.setDate(1);
 
 const state = {
@@ -296,9 +296,9 @@ async function loadServices() {
   try {
     const r = await fetch(API + '/api/services');
     const data = await r.json();
-    services = data.services; mobileSurcharge = data.mobileSurcharge; mobileEnabled = data.mobileEnabled !== false;
+    services = data.services; mobileSurcharge = data.mobileSurcharge; mobileEnabled = data.mobileEnabled !== false; pickupDropoffEnabled = !!data.pickupDropoffEnabled;
     renderSvcs();
-    renderLocations(); // mobileEnabled may have just changed — re-render the location cards
+    renderLocations(); // mobileEnabled/pickupDropoffEnabled may have just changed — re-render the location cards
   } catch (e) {
     document.getElementById('svc-list').innerHTML = '<p style="color:var(--ink3)">Could not load services — please refresh.</p>';
   }
@@ -323,7 +323,7 @@ async function loadLocations() {
 function maybeSkipLocationStep() {
   if (autoSkipChecked || !servicesLoaded || !locationsLoaded) return;
   autoSkipChecked = true;
-  if (locations.length === 1 && !mobileEnabled) {
+  if (locations.length === 1 && !mobileEnabled && !pickupDropoffEnabled) {
     pickLocation(locations[0].id);
     goStep(2);
   }
@@ -361,11 +361,33 @@ function renderLocations() {
   } else if (state.location === 'mobile') {
     state.location = null; state.address = ''; // mobile just got disabled out from under a selection
   }
+  if (pickupDropoffEnabled) {
+    const pdSel = state.location === 'pickup-dropoff' ? ' sel' : '';
+    html += `<div class="loc-card${pdSel}" id="loc-pickup-dropoff" onclick="pickLocation('pickup-dropoff')">
+      <div class="loc-top">
+        <div>
+          <div class="loc-name">🚚 Pickup &amp; Drop-off</div>
+          <div class="loc-addr">We'll swing by, take your gear to the shop, and bring it right back once it's ready.</div>
+        </div>
+        <div class="loc-radio"></div>
+      </div>
+      <div class="mobile-addr-wrap" id="pd-addr-wrap" style="display:none" onclick="event.stopPropagation()">
+        <div class="field"><label>Your Address *</label><input type="text" id="inp-pd-address" placeholder="123 Example St SW, Calgary, AB" oninput="state.address=this.value.trim();validateLocationStep();"/></div>
+      </div>
+    </div>`;
+  } else if (state.location === 'pickup-dropoff') {
+    state.location = null; state.address = ''; // pickup & drop-off just got disabled out from under a selection
+  }
   document.getElementById('loc-grid').innerHTML = html;
   const addrWrap = document.getElementById('mobile-addr-wrap');
   if (addrWrap) {
     addrWrap.style.display = state.location === 'mobile' ? 'block' : 'none';
     if (state.location === 'mobile') document.getElementById('inp-address').value = state.address;
+  }
+  const pdAddrWrap = document.getElementById('pd-addr-wrap');
+  if (pdAddrWrap) {
+    pdAddrWrap.style.display = state.location === 'pickup-dropoff' ? 'block' : 'none';
+    if (state.location === 'pickup-dropoff') document.getElementById('inp-pd-address').value = state.address;
   }
 }
 
@@ -379,7 +401,8 @@ function pickLocation(id) {
 
 function validateLocationStep() {
   const isKnownLocation = locations.some((l) => l.id === state.location);
-  const ok = isKnownLocation ? true : (state.location === 'mobile' ? !!state.address : false);
+  const needsAddress = state.location === 'mobile' || state.location === 'pickup-dropoff';
+  const ok = isKnownLocation ? true : (needsAddress ? !!state.address : false);
   document.getElementById('btn-1').disabled = !ok;
 }
 
@@ -599,6 +622,7 @@ function cartTotal() {
 function locationDisplayName() {
   if (!state.location) return '—';
   if (state.location === 'mobile') return 'Mobile' + (state.address ? ' — ' + state.address : '');
+  if (state.location === 'pickup-dropoff') return 'Pickup & Drop-off' + (state.address ? ' — ' + state.address : '');
   const loc = locations.find((l) => l.id === state.location);
   return loc ? loc.name : state.location;
 }
@@ -647,7 +671,7 @@ async function confirmBooking() {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         location: state.location,
-        address: state.location === 'mobile' ? state.address : undefined,
+        address: (state.location === 'mobile' || state.location === 'pickup-dropoff') ? state.address : undefined,
         items: Object.entries(state.cart).map(([serviceId, qty]) => ({ serviceId, qty })),
         date: state.date, time: state.time,
         customerName: state.name, phone: state.phone, email: state.email,

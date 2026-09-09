@@ -54,6 +54,7 @@ db.defaults({
     kidsDiscountText: "🧒 Kids' equipment discounts apply — just ask when you book.",
     mobileEnabled: true,
     mobileSurcharge: 10,
+    pickupDropoffEnabled: false,
     locations: [
       { id: "location-a", name: "Location A", address: "26 Val Gardena View SW, Calgary, AB T3H 5Z5", enabled: true },
       { id: "location-b", name: "Test Location", address: "Patina Dr SW, Calgary, AB", enabled: true },
@@ -87,6 +88,9 @@ db.defaults({
   if (staleLinks.includes(cfg.googleReviewUrl)) {
     db.set("siteConfig.googleReviewUrl", "https://www.google.com/maps/search/?api=1&query=Ski+Doc+Calgary+26+Val+Gardena+View+SW+Calgary+AB").write();
   }
+  if (cfg.pickupDropoffEnabled === undefined) {
+    db.set("siteConfig.pickupDropoffEnabled", false).write();
+  }
 })();
 
 function getConfig() { return db.get("siteConfig").value(); }
@@ -95,6 +99,7 @@ function getLocations() { return getConfig().locations; }
 function getEnabledLocations() { return getLocations().filter((l) => l.enabled !== false); }
 function getMobileSurcharge() { return getConfig().mobileSurcharge; }
 function isMobileEnabled() { return getConfig().mobileEnabled !== false; }
+function isPickupDropoffEnabled() { return getConfig().pickupDropoffEnabled === true; }
 function bizName() { return getConfig().businessName || BUSINESS_NAME; }
 function bizPhone() { return getConfig().phone || ""; }
 
@@ -142,23 +147,27 @@ function getCalgaryNow() {
 
 function locationLabel(location, address) {
   if (location === 'mobile') return `Mobile — ${address}`;
+  if (location === 'pickup-dropoff') return `Pickup & Drop-off — ${address}`;
   const loc = getLocations().find((l) => l.id === location);
   return loc ? loc.name : location;
 }
 
 // Customer-facing: always the actual address, since that's what they need
-// to get there — mobile bookings get their own address plus a note that
-// it's a door-to-door appointment.
+// to get there — mobile and pickup/drop-off bookings get their own address
+// plus a note about what happens there.
 function customerLocationLine(booking) {
   if (booking.location === 'mobile') return `${booking.address} (done at your door)`;
+  if (booking.location === 'pickup-dropoff') return `${booking.address} (picked up & dropped off at your door)`;
   const loc = getLocations().find((l) => l.id === booking.location);
   return loc ? loc.address : booking.location;
 }
 // Owner-facing: just the location name — they already know the addresses.
 function ownerLocationLine(booking) {
-  // Mobile jobs need the actual address so the owner knows where to drive —
-  // in-shop bookings just need the name since the owner already knows those.
+  // Mobile and pickup/drop-off jobs need the actual address so the owner
+  // knows where to drive — in-shop bookings just need the name since the
+  // owner already knows those.
   if (booking.location === 'mobile') return `Mobile — ${booking.address}`;
+  if (booking.location === 'pickup-dropoff') return `Pickup & Drop-off — ${booking.address}`;
   const loc = getLocations().find((l) => l.id === booking.location);
   return loc ? loc.name : booking.location;
 }
@@ -224,7 +233,7 @@ async function sendWinbackSMS(phone, name) {
   });
 }
 
-app.get("/api/services", (req, res) => res.json({ services: getServices(), mobileSurcharge: getMobileSurcharge(), mobileEnabled: isMobileEnabled() }));
+app.get("/api/services", (req, res) => res.json({ services: getServices(), mobileSurcharge: getMobileSurcharge(), mobileEnabled: isMobileEnabled(), pickupDropoffEnabled: isPickupDropoffEnabled() }));
 app.get("/api/locations", (req, res) => res.json(req.query.all ? getLocations() : getEnabledLocations()));
 app.get("/api/info", (req, res) => res.json({ businessName: bizName() }));
 app.get("/api/site-config", (req, res) => res.json(getConfig()));
@@ -330,6 +339,7 @@ function getWindow(dayOfWeek, isMobile) {
 
 function isValidLocation(location) {
   if (location === "mobile") return isMobileEnabled();
+  if (location === "pickup-dropoff") return isPickupDropoffEnabled();
   return getEnabledLocations().some((l) => l.id === location);
 }
 
@@ -388,8 +398,10 @@ app.post("/api/bookings", async (req, res) => {
   if (!location || !isValidLocation(location))
     return res.status(400).json({ error: "Select a valid location" });
   const isMobile = location === "mobile";
-  if (isMobile && !(address || "").trim())
-    return res.status(400).json({ error: "Address is required for mobile service" });
+  const isPickupDropoff = location === "pickup-dropoff";
+  const needsAddress = isMobile || isPickupDropoff;
+  if (needsAddress && !(address || "").trim())
+    return res.status(400).json({ error: `Address is required for ${isMobile ? "mobile" : "pickup & drop-off"} service` });
   if (!Array.isArray(items) || !items.length)
     return res.status(400).json({ error: "Select at least one service" });
   if (!date || !time || !customerName || !phone || !(email || "").trim())
@@ -417,7 +429,7 @@ app.post("/api/bookings", async (req, res) => {
     id: `SKI-${Date.now()}`,
     shortId: generateShortId(),
     location,
-    address: isMobile ? address.trim() : null,
+    address: needsAddress ? address.trim() : null,
     items: resolvedItems,
     serviceName: resolvedItems.map((i) => `${i.serviceName}${i.qty > 1 ? ` x${i.qty}` : ''}`).join(', '),
     servicePrice: totalPrice,
@@ -604,14 +616,23 @@ app.post("/api/wipe-data", (req, res) => {
   res.json({ success: true });
 });
 
+app.post("/api/traffic-reset", (req, res) => {
+  if (req.query.password !== ADMIN_PASSWORD) return res.status(401).json({ error: "Unauthorized" });
+  db.set("pageViews", []).write();
+  console.log(`⚠ Website traffic data reset by admin`);
+  res.json({ success: true });
+});
+
 // ── Manual entry — log a phone/in-person booking directly as confirmed ──
 app.post("/api/manual-entry", async (req, res) => {
   if (req.query.password !== ADMIN_PASSWORD) return res.status(401).json({ error: "Unauthorized" });
   const { customerName, items, date, notes, reviewDelayMinutes, location, address } = req.body;
   if (!customerName || !Array.isArray(items) || !items.length) return res.status(400).json({ error: "Name and at least one service required" });
   const isMobile = location === "mobile";
-  if (isMobile && !(address || "").trim()) return res.status(400).json({ error: "Address is required for mobile" });
-  if (!isMobile && !getLocations().some((l) => l.id === location)) return res.status(400).json({ error: "Select a valid location" });
+  const isPickupDropoff = location === "pickup-dropoff";
+  const needsAddress = isMobile || isPickupDropoff;
+  if (needsAddress && !(address || "").trim()) return res.status(400).json({ error: `Address is required for ${isMobile ? "mobile" : "pickup & drop-off"}` });
+  if (!needsAddress && !getLocations().some((l) => l.id === location)) return res.status(400).json({ error: "Select a valid location" });
 
   const resolvedItems = items
     .map((it) => ({
@@ -629,13 +650,12 @@ app.post("/api/manual-entry", async (req, res) => {
   else if (phone.length === 11 && phone[0] === "1") phone = "+" + phone;
   else if (phone.length > 0 && !phone.startsWith("+")) phone = "+" + phone;
 
-  const bookingLocation = isMobile ? "mobile" : location;
   const booking = {
     id: `SKI-${Date.now()}`,
     shortId: generateShortId(),
-    location: bookingLocation,
-    locationName: locationLabel(bookingLocation, isMobile ? address.trim() : null),
-    address: isMobile ? address.trim() : null,
+    location,
+    locationName: locationLabel(location, needsAddress ? address.trim() : null),
+    address: needsAddress ? address.trim() : null,
     items: resolvedItems,
     serviceName, servicePrice,
     date: date || new Date().toISOString().split('T')[0], time: "00:00",
@@ -655,6 +675,15 @@ app.post("/api/manual-entry", async (req, res) => {
     } catch (err) { console.error(`✗ Immediate review SMS failed:`, err.message); }
   }
   res.json({ success: true, bookingId: booking.id });
+});
+
+app.delete("/api/bookings/:id", (req, res) => {
+  if (req.query.password !== ADMIN_PASSWORD) return res.status(401).json({ error: "Unauthorized" });
+  const booking = db.get("bookings").find({ id: req.params.id }).value();
+  if (!booking) return res.status(404).json({ error: "Not found" });
+  db.get("bookings").remove({ id: req.params.id }).write();
+  console.log(`✓ Booking deleted by admin: ${req.params.id} (${booking.customerName})`);
+  res.json({ success: true });
 });
 
 app.post("/api/bookings/:id/noshow", (req, res) => {

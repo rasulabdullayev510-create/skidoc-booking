@@ -327,6 +327,7 @@ function fmt12(t) {
 }
 function fmtDate(d) { const [y, mo, day] = d.split('-'); return MONTHS[parseInt(mo) - 1] + ' ' + parseInt(day); }
 function isMobileBooking(b) { return b.location === 'mobile'; }
+function isPickupDropoffBooking(b) { return b.location === 'pickup-dropoff'; }
 function escapeHtml(s) { return (s || '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
 // Customer-typed booking notes, rendered as a small note line wherever a booking is shown.
 function notesLine(b) { return b.notes ? `<div style="font-size:11px;color:var(--text3);margin-top:4px;font-style:italic">📝 ${escapeHtml(b.notes)}</div>` : ''; }
@@ -338,7 +339,7 @@ function contactLine(b) {
   return parts.length ? parts.join(' · ') : '—';
 }
 function addressFor(b) {
-  if (isMobileBooking(b)) return b.address || '';
+  if (isMobileBooking(b) || isPickupDropoffBooking(b)) return b.address || '';
   const loc = locationsList.find((l) => l.id === b.location);
   return (loc && loc.address) || '';
 }
@@ -350,6 +351,8 @@ function typeBadge(b) {
   const liveName = (loc && loc.name) || b.locationName || 'In-Shop';
   const pill = isMobileBooking(b)
     ? `<span style="background:rgba(245,158,11,0.12);color:var(--yellow);font-size:10px;font-weight:700;padding:3px 8px;border-radius:6px">🚗 Mobile</span>`
+    : isPickupDropoffBooking(b)
+    ? `<span style="background:rgba(168,85,247,0.12);color:#a855f7;font-size:10px;font-weight:700;padding:3px 8px;border-radius:6px">🚚 Pickup &amp; Drop-off</span>`
     : `<span style="background:rgba(59,130,246,0.1);color:var(--primary);font-size:10px;font-weight:700;padding:3px 8px;border-radius:6px">📍 ${liveName}</span>`;
   return addr ? `${pill}<div style="font-size:11px;color:var(--text3);margin-top:3px">${addr}</div>` : pill;
 }
@@ -622,7 +625,11 @@ function renderTraffic() {
   const views = stats.viewsByDay;
   const totalThisMonth = Object.entries(views).filter(([d]) => d.startsWith(new Date().toISOString().slice(0, 7))).reduce((s, [, v]) => s + v, 0);
   document.getElementById('main').innerHTML = `
-    <div class="page-hdr"><h1>Website Traffic</h1><p>Visits tracked across all pages of your website</p></div>
+    <div class="page-hdr" style="display:flex;align-items:flex-end;justify-content:space-between;gap:12px;flex-wrap:wrap">
+      <div><h1>Website Traffic</h1><p>Visits tracked across all pages of your website</p></div>
+      <button class="btn-sm" style="background:var(--red)" onclick="resetTrafficData()">Reset Traffic Data</button>
+    </div>
+    <div class="form-msg" id="traffic-reset-msg" style="margin-bottom:16px"></div>
     <div class="traffic-grid">
       <div class="traffic-card"><div class="traffic-num" style="color:var(--primary)">${stats.totalViews.toLocaleString()}</div><div class="traffic-lbl">Total Views</div></div>
       <div class="traffic-card"><div class="traffic-num" style="color:var(--primary)">${totalThisMonth}</div><div class="traffic-lbl">This Month</div></div>
@@ -653,6 +660,19 @@ function renderTraffic() {
   });
 }
 
+async function resetTrafficData() {
+  if (!confirm('Reset website traffic data? This clears total views, daily visits, and conversion rate back to zero. Bookings, clients, and revenue are not affected. This cannot be undone.')) return;
+  const r = await fetch(API + '/api/traffic-reset?password=' + encodeURIComponent(pwd), { method: 'POST' });
+  const d = await r.json();
+  const msg = document.getElementById('traffic-reset-msg');
+  if (d.success) {
+    stats = await (await fetch(API + '/api/stats?password=' + encodeURIComponent(pwd))).json();
+    renderTraffic();
+  } else {
+    msg.className = 'form-msg fail'; msg.style.display = 'block'; msg.textContent = d.error || 'Failed to reset.';
+  }
+}
+
 // ── All Bookings ─────────────────────────────────────────────
 function renderBookings(filter) {
   filter = filter || currentBookingsFilter;
@@ -674,10 +694,11 @@ function renderBookings(filter) {
           <div class="mob-card-sub">${contactLine(b)}</div>
           <div class="mob-card-meta">${b.serviceName}<br>${typeBadge(b)}<br>${b.date} · ${fmt12(b.time)} · <span style="color:var(--green);font-weight:700">$${b.servicePrice}</span>${tipLine}</div>
           ${notesLine(b)}
-          ${b.status === 'confirmed' ? `<div class="mob-card-actions">
-            <button onclick="addTip('${b.id}',this)" style="padding:7px 14px;border-radius:8px;border:1.5px solid var(--yellow);background:var(--yellow-bg);color:var(--yellow);font-family:inherit;font-size:12px;font-weight:700;cursor:pointer">${b.tipAmount ? 'Edit Tip' : '+ Tip'}</button>
-            <button onclick="markNoShow('${b.id}')" style="padding:7px 14px;border-radius:8px;border:1.5px solid var(--red);background:var(--red-bg);color:var(--red);font-family:inherit;font-size:12px;font-weight:700;cursor:pointer">No-Show</button>
-          </div>` : ''}
+          <div class="mob-card-actions">
+            ${b.status === 'confirmed' ? `<button onclick="addTip('${b.id}',this)" style="padding:7px 14px;border-radius:8px;border:1.5px solid var(--yellow);background:var(--yellow-bg);color:var(--yellow);font-family:inherit;font-size:12px;font-weight:700;cursor:pointer">${b.tipAmount ? 'Edit Tip' : '+ Tip'}</button>
+            <button onclick="markNoShow('${b.id}')" style="padding:7px 14px;border-radius:8px;border:1.5px solid var(--red);background:var(--red-bg);color:var(--red);font-family:inherit;font-size:12px;font-weight:700;cursor:pointer">No-Show</button>` : ''}
+            <button onclick="deleteBooking('${b.id}','${b.customerName.replace(/'/g,"\\'")}')" style="padding:7px 14px;border-radius:8px;border:1.5px solid var(--text3);background:var(--bg3);color:var(--text3);font-family:inherit;font-size:12px;font-weight:700;cursor:pointer">🗑 Delete</button>
+          </div>
         </div>`;
       }).join('') : '<div class="mob-empty">No bookings in this category</div>'}</div>`
     : `<table>
@@ -685,11 +706,11 @@ function renderBookings(filter) {
         <tbody>${list.length ? list.map((b) => {
           const statusBadge = b.status === 'noshow' ? `<span class="badge badge-noshow">No-Show</span>` : `<span class="badge badge-${b.status}">${b.status.replace(/_/g,' ')}</span>`;
           const priceCell = b.tipAmount ? `<div style="font-weight:700;color:var(--green)">$${b.servicePrice}</div><div style="font-size:11px;color:var(--yellow);font-weight:700">+$${b.tipAmount} tip</div>` : `<span style="font-weight:700;color:var(--green)">$${b.servicePrice}</span>`;
-          const actionCell = b.status === 'confirmed'
-            ? `<div style="display:flex;gap:6px;flex-wrap:wrap">
-                <button onclick="addTip('${b.id}',this)" style="padding:5px 10px;border-radius:7px;border:1.5px solid var(--yellow);background:var(--yellow-bg);color:var(--yellow);font-family:inherit;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap">${b.tipAmount ? 'Edit Tip' : '+ Tip'}</button>
-                <button onclick="markNoShow('${b.id}')" style="padding:5px 10px;border-radius:7px;border:1.5px solid var(--red);background:var(--red-bg);color:var(--red);font-family:inherit;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap">No-Show</button>
-              </div>` : '';
+          const actionCell = `<div style="display:flex;gap:6px;flex-wrap:wrap">
+                ${b.status === 'confirmed' ? `<button onclick="addTip('${b.id}',this)" style="padding:5px 10px;border-radius:7px;border:1.5px solid var(--yellow);background:var(--yellow-bg);color:var(--yellow);font-family:inherit;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap">${b.tipAmount ? 'Edit Tip' : '+ Tip'}</button>
+                <button onclick="markNoShow('${b.id}')" style="padding:5px 10px;border-radius:7px;border:1.5px solid var(--red);background:var(--red-bg);color:var(--red);font-family:inherit;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap">No-Show</button>` : ''}
+                <button onclick="deleteBooking('${b.id}','${b.customerName.replace(/'/g,"\\'")}')" style="padding:5px 10px;border-radius:7px;border:1.5px solid var(--text3);background:var(--bg3);color:var(--text3);font-family:inherit;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap">🗑 Delete</button>
+              </div>`;
           return `<tr>
           <td style="font-family:monospace;font-size:11px;color:var(--text3)">${b.shortId || b.id.slice(-6)}</td>
           <td><div style="font-weight:600">${b.customerName}</div><div style="font-size:11px;color:var(--text3)">${contactLine(b)}</div></td>
@@ -715,6 +736,25 @@ function renderBookings(filter) {
 }
 
 // ── Clients ──────────────────────────────────────────────────
+function typeCounts(c) {
+  const parts = [];
+  if (c.inShopCount > 0) parts.push({ label: 'In-Shop', icon: '📍', count: c.inShopCount, color: 'var(--primary)', bg: 'rgba(59,130,246,0.1)' });
+  if (c.mobileCount > 0) parts.push({ label: 'Mobile', icon: '🚗', count: c.mobileCount, color: 'var(--yellow)', bg: 'rgba(245,158,11,0.12)' });
+  if (c.pickupCount > 0) parts.push({ label: 'Pickup & Drop-off', icon: '🚚', count: c.pickupCount, color: '#a855f7', bg: 'rgba(168,85,247,0.12)' });
+  return parts;
+}
+function typeSummaryLine(c) {
+  const parts = typeCounts(c);
+  const multi = parts.length > 1;
+  return parts.map((p) => multi ? `${p.icon} ${p.count}× ${p.label}` : `${p.icon} ${p.label}`).join(' · ');
+}
+function typeSummaryCell(c) {
+  const parts = typeCounts(c);
+  const multi = parts.length > 1;
+  const pill = (p) => `<span style="background:${p.bg};color:${p.color};font-size:${multi ? '10px' : '10px'};font-weight:700;padding:${multi ? '2px 7px' : '3px 8px'};border-radius:${multi ? '5px' : '6px'}">${p.icon} ${multi ? p.count + '× ' : ''}${p.label}</span>`;
+  if (!parts.length) return '—';
+  return multi ? `<div style="display:flex;flex-direction:column;gap:3px">${parts.map(pill).join('')}</div>` : pill(parts[0]);
+}
 function renderClients() {
   const clientMap = {};
   bookings.filter((b) => b.status === 'confirmed' || b.status === 'noshow').forEach((b) => {
@@ -722,14 +762,14 @@ function renderClients() {
     const digits = b.phone ? b.phone.replace(/\D/g, '') : '';
     const key = digits ? digits.slice(-10) : '__' + b.customerName.toLowerCase().trim();
     if (!clientMap[key]) {
-      clientMap[key] = { name: b.customerName, phone: b.phone || '—', email: b.email || null, visits: 0, noshowCount: 0, totalSpent: 0, services: {}, firstVisit: b.date, lastVisit: b.date, onlineCount: 0, manualCount: 0, mobileCount: 0, inShopCount: 0, latestConfirmedId: null, latestConfirmedDate: null, latestNotes: null };
+      clientMap[key] = { name: b.customerName, phone: b.phone || '—', email: b.email || null, visits: 0, noshowCount: 0, totalSpent: 0, services: {}, firstVisit: b.date, lastVisit: b.date, onlineCount: 0, manualCount: 0, mobileCount: 0, pickupCount: 0, inShopCount: 0, latestConfirmedId: null, latestConfirmedDate: null, latestNotes: null };
     }
     const c = clientMap[key];
     if (b.status === 'confirmed') {
       c.visits++; c.totalSpent += Number(b.servicePrice) || 0;
       c.services[b.serviceName] = (c.services[b.serviceName] || 0) + 1;
       if (b.source === 'manual') c.manualCount++; else c.onlineCount++;
-      if (isMobileBooking(b)) c.mobileCount++; else c.inShopCount++;
+      if (isMobileBooking(b)) c.mobileCount++; else if (isPickupDropoffBooking(b)) c.pickupCount++; else c.inShopCount++;
       if (!c.latestConfirmedDate || b.date > c.latestConfirmedDate) { c.latestConfirmedDate = b.date; c.latestConfirmedId = b.id; c.latestNotes = b.notes || null; }
     }
     if (b.status === 'noshow') c.noshowCount++;
@@ -759,7 +799,7 @@ function renderClients() {
                 ${!isNoShowOnly ? `<div style="font-size:11px;color:var(--text3)">${c.visits} visit${c.visits !== 1 ? 's' : ''}${isRepeat ? ' · <span style="color:var(--primary)">Repeat</span>' : ''}</div>` : `<div style="font-size:11px;color:var(--red)">${c.noshowCount}× No-Show</div>`}
               </div>
             </div>
-            ${!isNoShowOnly ? `<div class="mob-card-meta" style="margin-top:6px">${topService ? topService[0] + ' · ' : ''}${sourceLabel}<br>${c.mobileCount > 0 && c.inShopCount > 0 ? `📍 ${c.inShopCount}× In-Shop · 🚗 ${c.mobileCount}× Mobile` : c.mobileCount > 0 ? '🚗 Mobile' : '📍 In-Shop'} · Last: ${fmtDate(c.lastVisit)}</div>${notesLine({ notes: c.latestNotes })}` : ''}
+            ${!isNoShowOnly ? `<div class="mob-card-meta" style="margin-top:6px">${topService ? topService[0] + ' · ' : ''}${sourceLabel}<br>${typeSummaryLine(c)} · Last: ${fmtDate(c.lastVisit)}</div>${notesLine({ notes: c.latestNotes })}` : ''}
             <div class="mob-card-actions">
               ${c.phone !== '—' ? `<button onclick="sendWinback('${c.phone}','${c.name.replace(/'/g,"\\'")}',this)" style="padding:7px 14px;border-radius:8px;border:1.5px solid var(--primary);background:var(--primary-glow);color:var(--primary);font-family:inherit;font-size:12px;font-weight:700;cursor:pointer">📲 Win-Back</button>` : ''}
               ${c.phone !== '—' ? `<button onclick="sendReview('${c.phone}','${c.name.replace(/'/g,"\\'")}',this)" style="padding:7px 14px;border-radius:8px;border:1.5px solid var(--yellow);background:var(--yellow-bg);color:var(--yellow);font-family:inherit;font-size:12px;font-weight:700;cursor:pointer">⭐ Review</button>` : ''}
@@ -777,10 +817,7 @@ function renderClients() {
           const sourceLabel = c.onlineCount > 0 && c.manualCount > 0 ? 'Online + Phone' : c.onlineCount > 0 ? 'Online' : 'Phone / In-Person';
           const sourceBadgeColor = c.onlineCount > 0 && c.manualCount === 0 ? 'var(--primary)' : c.manualCount > 0 && c.onlineCount === 0 ? 'var(--yellow)' : 'var(--green)';
           const sourceBgColor = c.onlineCount > 0 && c.manualCount === 0 ? 'var(--primary-glow)' : c.manualCount > 0 && c.onlineCount === 0 ? 'var(--yellow-bg)' : 'var(--green-bg)';
-          const typeCell = c.mobileCount > 0 && c.inShopCount > 0
-            ? `<div style="display:flex;flex-direction:column;gap:3px"><span style="background:rgba(59,130,246,0.1);color:var(--primary);font-size:10px;font-weight:700;padding:2px 7px;border-radius:5px">📍 ${c.inShopCount}× In-Shop</span><span style="background:rgba(245,158,11,0.12);color:var(--yellow);font-size:10px;font-weight:700;padding:2px 7px;border-radius:5px">🚗 ${c.mobileCount}× Mobile</span></div>`
-            : c.mobileCount > 0 ? `<span style="background:rgba(245,158,11,0.12);color:var(--yellow);font-size:10px;font-weight:700;padding:3px 8px;border-radius:6px">🚗 Mobile</span>`
-            : `<span style="background:rgba(59,130,246,0.1);color:var(--primary);font-size:10px;font-weight:700;padding:3px 8px;border-radius:6px">📍 In-Shop</span>`;
+          const typeCell = typeSummaryCell(c);
           return `<tr style="${isNoShowOnly ? 'opacity:0.65' : ''}">
             <td style="color:var(--text3);font-size:12px">${i + 1}</td>
             <td><div style="display:flex;align-items:center;gap:10px"><div style="width:34px;height:34px;border-radius:50%;background:${isNoShowOnly ? 'var(--red-bg)' : 'var(--bg4)'};display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:${isNoShowOnly ? 'var(--red)' : 'var(--text)'};flex-shrink:0">${c.name[0].toUpperCase()}</div><div><div style="font-weight:600;display:flex;align-items:center;gap:6px">${c.name}${isNoShowOnly ? ` <span style="background:rgba(239,68,68,0.12);color:var(--red);font-size:10px;font-weight:700;padding:2px 7px;border-radius:5px">NO SHOW</span>` : ''}</div><div style="font-size:11px;color:var(--text3)">${c.phone}${c.email ? ' · ' + escapeHtml(c.email) : ''}</div></div></div></td>
@@ -826,9 +863,9 @@ function renderManualEntry() {
 
       <div style="margin-top:16px;display:flex;align-items:center;gap:12px;flex-wrap:wrap">
         <div class="field" style="margin:0;min-width:200px"><label>Location</label>
-          <select id="me-location" onchange="toggleManualAddress()">${(locationsList || []).map((l) => `<option value="${l.id}">📍 ${l.name}</option>`).join('')}<option value="mobile">🚗 Mobile</option></select>
+          <select id="me-location" onchange="toggleManualAddress()">${(locationsList || []).map((l) => `<option value="${l.id}">📍 ${l.name}</option>`).join('')}<option value="mobile">🚗 Mobile</option><option value="pickup-dropoff">🚚 Pickup &amp; Drop-off</option></select>
         </div>
-        <div class="field" style="margin:0;flex:1;min-width:200px;display:none" id="me-address-wrap"><label>Address (mobile)</label><input type="text" id="me-address" placeholder="e.g. 123 Main St SW"/></div>
+        <div class="field" style="margin:0;flex:1;min-width:200px;display:none" id="me-address-wrap"><label>Address</label><input type="text" id="me-address" placeholder="e.g. 123 Main St SW"/></div>
         <div class="field" style="margin:0;flex:1;min-width:200px"><label>Notes (optional)</label><input type="text" id="me-notes" placeholder="e.g. Paid cash"/></div>
         <div class="field" style="margin:0;min-width:160px"><label>Review SMS Delay</label>
           <select id="me-delay"><option value="-1">No review SMS</option><option value="0">Send immediately</option>${Array.from({ length: 24 }, (_, i) => `<option value="${(i + 1) * 60}"${i + 1 === 12 ? ' selected' : ''}>${i + 1} hour${i + 1 > 1 ? 's' : ''}</option>`).join('')}</select>
@@ -914,7 +951,8 @@ function updateManualTotal() {
 }
 
 function toggleManualAddress() {
-  document.getElementById('me-address-wrap').style.display = document.getElementById('me-location').value === 'mobile' ? 'block' : 'none';
+  const loc = document.getElementById('me-location').value;
+  document.getElementById('me-address-wrap').style.display = (loc === 'mobile' || loc === 'pickup-dropoff') ? 'block' : 'none';
 }
 
 async function addManualEntry() {
@@ -931,13 +969,13 @@ async function addManualEntry() {
   const address = document.getElementById('me-address').value.trim();
   const msg = document.getElementById('me-msg');
   if (!name || !items.length) { msg.className = 'form-msg fail'; msg.style.display = 'block'; msg.textContent = 'Name and at least one service are required.'; return; }
-  if (location === 'mobile' && !address) { msg.className = 'form-msg fail'; msg.style.display = 'block'; msg.textContent = 'Address is required for mobile.'; return; }
+  if ((location === 'mobile' || location === 'pickup-dropoff') && !address) { msg.className = 'form-msg fail'; msg.style.display = 'block'; msg.textContent = 'Address is required.'; return; }
   const btn = document.querySelector('[onclick="addManualEntry()"]');
   btn.textContent = 'Logging...'; btn.disabled = true;
   try {
     const r = await fetch(API + '/api/manual-entry?password=' + encodeURIComponent(pwd), {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ customerName: name, phone, items, date, notes, reviewDelayMinutes: delay, location, address: location === 'mobile' ? address : null }),
+      body: JSON.stringify({ customerName: name, phone, items, date, notes, reviewDelayMinutes: delay, location, address: (location === 'mobile' || location === 'pickup-dropoff') ? address : null }),
     });
     const d = await r.json();
     if (d.success) {
@@ -961,6 +999,17 @@ async function markNoShow(id) {
   const d = await r.json();
   if (d.success) { bookings = await (await fetch(API + '/api/bookings?password=' + encodeURIComponent(pwd))).json(); showPage(currentPage); }
   else { alert('Failed to mark as no-show.'); }
+}
+
+async function deleteBooking(id, name) {
+  if (!confirm(`Permanently delete this booking (${name})? No text is sent to the customer. This cannot be undone.`)) return;
+  const r = await fetch(API + '/api/bookings/' + id + '?password=' + encodeURIComponent(pwd), { method: 'DELETE' });
+  const d = await r.json();
+  if (d.success) {
+    bookings = await (await fetch(API + '/api/bookings?password=' + encodeURIComponent(pwd))).json();
+    stats = await (await fetch(API + '/api/stats?password=' + encodeURIComponent(pwd))).json();
+    showPage(currentPage);
+  } else { alert(d.error || 'Failed to delete.'); }
 }
 
 async function sendWinback(phone, name, btn) {
@@ -1270,6 +1319,7 @@ async function putSiteConfig(patch) {
 function renderSiteEditor() {
   const c = siteConfig || {};
   const mobileOn = c.mobileEnabled !== false;
+  const pickupDropoffOn = c.pickupDropoffEnabled === true;
   const svc = c.services || [];
   const locs = c.locations || [];
 
@@ -1284,6 +1334,16 @@ function renderSiteEditor() {
         <button class="btn-sm" style="${mobileOn ? 'background:var(--red)' : ''}" onclick="toggleMobileService()">${mobileOn ? 'Turn Mobile Off' : 'Turn Mobile Back On'}</button>
       </div>
       <div class="form-msg" id="mobile-toggle-msg"></div>
+    </div>
+
+    <div class="form-card" style="border-color:${pickupDropoffOn ? 'var(--border)' : 'var(--red)'}">
+      <h3>Pickup &amp; Drop-off — On / Off Switch</h3>
+      <p>Turning this on adds a "Pickup & Drop-off" option to the booking page's location step — we pick up the customer's gear, tune it at the shop, and bring it back. Turn it off any time — nothing is deleted.</p>
+      <div style="display:flex;align-items:center;gap:16px">
+        <span class="badge ${pickupDropoffOn ? 'badge-confirmed' : 'badge-denied'}" style="font-size:12px;padding:6px 14px">${pickupDropoffOn ? 'PICKUP & DROP-OFF IS ON' : 'PICKUP & DROP-OFF IS OFF'}</span>
+        <button class="btn-sm" style="${pickupDropoffOn ? 'background:var(--red)' : ''}" onclick="togglePickupDropoff()">${pickupDropoffOn ? 'Turn Off' : 'Turn On'}</button>
+      </div>
+      <div class="form-msg" id="pickup-dropoff-toggle-msg"></div>
     </div>
 
     <div class="form-card">
@@ -1456,6 +1516,13 @@ async function toggleMobileService() {
   if (!next && !confirm('Turn mobile service off? It disappears from your website and booking page immediately, but nothing is deleted — you can turn it back on any time.')) return;
   const d = await putSiteConfig({ mobileEnabled: next });
   cmsMsg('mobile-toggle-msg', d.success, d.success ? (next ? '✓ Mobile is back on.' : '✓ Mobile is now off everywhere.') : (d.error || 'Failed.'));
+  if (d.success) renderSiteEditor();
+}
+async function togglePickupDropoff() {
+  const next = !(siteConfig.pickupDropoffEnabled === true);
+  if (!next && !confirm('Turn Pickup & Drop-off off? It disappears from the booking page immediately, but nothing is deleted — you can turn it back on any time.')) return;
+  const d = await putSiteConfig({ pickupDropoffEnabled: next });
+  cmsMsg('pickup-dropoff-toggle-msg', d.success, d.success ? (next ? '✓ Pickup & Drop-off is on.' : '✓ Pickup & Drop-off is now off.') : (d.error || 'Failed.'));
   if (d.success) renderSiteEditor();
 }
 
