@@ -28,7 +28,7 @@ const DATA_DIR = process.env.DATA_DIR || __dirname;
 const adapter = new FileSync(path.join(DATA_DIR, "db.json"));
 const db = low(adapter);
 db.defaults({
-  bookings: [], feedback: [], expenses: [], blocked: [], pageViews: [], outreach: [],
+  bookings: [], feedback: [], expenses: [], blocked: [], pageViews: [], outreach: [], trafficResetAt: null,
   siteConfig: {
     businessName: "Ski Doc Calgary",
     phone: "(825) 521-2075",
@@ -636,6 +636,10 @@ app.post("/api/wipe-data", (req, res) => {
 app.post("/api/traffic-reset", (req, res) => {
   if (req.query.password !== ADMIN_PASSWORD) return res.status(401).json({ error: "Unauthorized" });
   db.set("pageViews", []).write();
+  // Bookings themselves aren't deleted (see /api/wipe-data for that), but the
+  // "bookings from site" / conversion-rate figures only count bookings made
+  // after this point, so they don't show a stale pre-reset total against 0 views.
+  db.set("trafficResetAt", new Date().toISOString()).write();
   console.log(`⚠ Website traffic data reset by admin`);
   res.json({ success: true });
 });
@@ -867,7 +871,13 @@ app.get("/api/stats", (req, res) => {
 
   const totalViews = pageViews.length;
   const homeViews = pageViews.filter((v) => v.page === "home").length;
-  const convRate = totalViews ? ((bookings.length / totalViews) * 100).toFixed(1) : "0.0";
+  // Scoped to bookings made since the last traffic reset, so "bookings from
+  // site" / conversion rate don't show a stale all-time count against 0 views.
+  const trafficResetAt = db.get("trafficResetAt").value();
+  const bookingsSinceTrafficReset = trafficResetAt
+    ? bookings.filter((b) => b.createdAt >= trafficResetAt).length
+    : bookings.length;
+  const convRate = totalViews ? ((bookingsSinceTrafficReset / totalViews) * 100).toFixed(1) : "0.0";
 
   res.json({
     totalBookings: confirmed.length,
@@ -875,6 +885,7 @@ app.get("/api/stats", (req, res) => {
     totalExpenses, netProfit,
     avgRating, reviewRate,
     totalViews, homeViews, viewsByDay, convRate,
+    bookingsFromSite: bookingsSinceTrafficReset,
     revenueByDay,
   });
 });

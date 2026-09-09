@@ -497,7 +497,7 @@ function renderOverview(period) {
           <div class="card-sub">Website visitors → booked appointments</div>
           <div style="text-align:center;padding:20px 0">
             <div style="font-size:3.5rem;font-weight:800;color:var(--primary);letter-spacing:-0.03em">${stats.convRate}%</div>
-            <div style="font-size:13px;color:var(--text3);margin-top:4px">${stats.homeViews} visits → ${stats.totalBookings} bookings</div>
+            <div style="font-size:13px;color:var(--text3);margin-top:4px">${stats.homeViews} visits → ${stats.bookingsFromSite} bookings</div>
           </div>
           <div class="conv-meter">
             <div class="conv-bar-bg"><div class="conv-bar-fill" id="conv-fill" style="width:0%"></div></div>
@@ -636,7 +636,7 @@ function renderTraffic() {
       <div class="traffic-card"><div class="traffic-num" style="color:var(--primary)">${stats.totalViews.toLocaleString()}</div><div class="traffic-lbl">Total Views</div></div>
       <div class="traffic-card"><div class="traffic-num" style="color:var(--primary)">${totalThisMonth}</div><div class="traffic-lbl">This Month</div></div>
       <div class="traffic-card"><div class="traffic-num" style="color:var(--green)">${stats.convRate}%</div><div class="traffic-lbl">Conversion Rate</div></div>
-      <div class="traffic-card"><div class="traffic-num" style="color:var(--yellow)">${stats.totalBookings}</div><div class="traffic-lbl">Bookings from Site</div></div>
+      <div class="traffic-card"><div class="traffic-num" style="color:var(--yellow)">${stats.bookingsFromSite}</div><div class="traffic-lbl">Bookings from Site</div></div>
     </div>
     <div class="chart-card" style="margin-bottom:20px">
       <div class="card-title">Daily Website Visits — Last 30 Days</div>
@@ -663,7 +663,7 @@ function renderTraffic() {
 }
 
 async function resetTrafficData() {
-  if (!confirm('Reset website traffic data? This clears total views, daily visits, and conversion rate back to zero. Bookings, clients, and revenue are not affected. This cannot be undone.')) return;
+  if (!confirm('Reset website traffic data? This clears total views, daily visits, "bookings from site", and conversion rate back to zero. No bookings, clients, or revenue are deleted — this only resets the traffic-tracking numbers. This cannot be undone.')) return;
   const r = await fetch(API + '/api/traffic-reset?password=' + encodeURIComponent(pwd), { method: 'POST' });
   const d = await r.json();
   const msg = document.getElementById('traffic-reset-msg');
