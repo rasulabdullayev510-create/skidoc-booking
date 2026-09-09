@@ -42,7 +42,7 @@ db.defaults({
     // documented api=1 search URL — verified (not guessed) to surface
     // this exact business; every place_id/CID extraction attempt so far
     // has resolved to the wrong listing or nothing at all.
-    googleReviewUrl: "https://www.google.com/maps/search/?api=1&query=Ski+Doc+Calgary+26+Val+Gardena+View+SW+Calgary+AB",
+    googleReviewUrl: "https://g.page/r/CbgyguKR2ha2EBM/review",
     hero: {
       headline: "Trust Your Turn",
       subtitle: "Fast, affordable, and expert ski & snowboard tuning to keep your gear in peak condition.",
@@ -85,9 +85,10 @@ db.defaults({
     "https://search.google.com/local/writereview?placeid=ChIJrc_l_1JtcVMRuDKC4pHaFrY",
     "https://www.google.com/maps/place/?q=place_id:ChIJrc_l_1JtcVMRuDKC4pHaFrY",
     "https://www.google.com/maps?cid=13120914884495815352",
+    "https://www.google.com/maps/search/?api=1&query=Ski+Doc+Calgary+26+Val+Gardena+View+SW+Calgary+AB",
   ];
   if (staleLinks.includes(cfg.googleReviewUrl)) {
-    db.set("siteConfig.googleReviewUrl", "https://www.google.com/maps/search/?api=1&query=Ski+Doc+Calgary+26+Val+Gardena+View+SW+Calgary+AB").write();
+    db.set("siteConfig.googleReviewUrl", "https://g.page/r/CbgyguKR2ha2EBM/review").write();
   }
   if (cfg.pickupDropoffEnabled === undefined) {
     db.set("siteConfig.pickupDropoffEnabled", false).write();
