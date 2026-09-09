@@ -28,7 +28,7 @@ const DATA_DIR = process.env.DATA_DIR || __dirname;
 const adapter = new FileSync(path.join(DATA_DIR, "db.json"));
 const db = low(adapter);
 db.defaults({
-  bookings: [], feedback: [], expenses: [], blocked: [], pageViews: [],
+  bookings: [], feedback: [], expenses: [], blocked: [], pageViews: [], outreach: [],
   siteConfig: {
     businessName: "Ski Doc Calgary",
     phone: "(825) 521-2075",
@@ -248,6 +248,12 @@ app.get("/api/site-config", (req, res) => res.json(getConfig()));
 function canonicalPhone(phone) {
   const digits = (phone || "").toString().replace(/\D/g, "");
   return digits.length >= 10 ? digits.slice(-10) : digits;
+}
+
+// Records a win-back/review send so the admin Clients tab can grey the
+// button out for 24h instead of it staying "Sent" forever in one session.
+function logOutreach(phone, type) {
+  db.get("outreach").push({ phone: canonicalPhone(phone), type, sentAt: new Date().toISOString() }).write();
 }
 
 // Returning-customer check for the booking form's "welcome back" greeting.
@@ -722,11 +728,16 @@ app.post("/api/bookings/:id/tip", (req, res) => {
   res.json({ success: true });
 });
 
+app.get("/api/outreach", (req, res) => {
+  if (req.query.password !== ADMIN_PASSWORD) return res.status(401).json({ error: "Unauthorized" });
+  res.json(db.get("outreach").value());
+});
+
 app.post("/api/winback", async (req, res) => {
   if (req.query.password !== ADMIN_PASSWORD) return res.status(401).json({ error: "Unauthorized" });
   const { phone, customerName } = req.body;
   if (!phone) return res.status(400).json({ error: "Phone required" });
-  try { await sendWinbackSMS(phone, customerName || "there"); res.json({ success: true }); }
+  try { await sendWinbackSMS(phone, customerName || "there"); logOutreach(phone, "winback"); res.json({ success: true }); }
   catch (err) { console.error(`✗ Winback SMS failed:`, err.message); res.status(500).json({ error: "Failed to send" }); }
 });
 
@@ -741,6 +752,7 @@ app.post("/api/send-review", async (req, res) => {
   try {
     await sendReviewSMS(latest);
     db.get("bookings").find({ id: latest.id }).assign({ reviewSentAt: new Date().toISOString() }).write();
+    logOutreach(phone, "review");
     res.json({ success: true });
   } catch (err) { console.error(`✗ Manual review SMS failed:`, err.message); res.status(500).json({ error: "Failed to send" }); }
 });

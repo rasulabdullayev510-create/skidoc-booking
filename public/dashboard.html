@@ -250,7 +250,7 @@ const API = /\bonrender\.com$/.test(location.hostname) || location.hostname === 
   ? window.location.origin
   : 'https://skidoc-booking-eblt.onrender.com';
 
-let pwd = '', stats = null, bookings = [], feedback = [], expenses = [];
+let pwd = '', stats = null, bookings = [], feedback = [], expenses = [], outreach = [];
 let siteConfig = null, locationsList = [];
 let currentPage = 'overview', currentPeriod = 'today', currentBookingsFilter = 'all';
 let currentBlockScope = 'master'; // 'master' | 'location-a' | 'location-b' | 'mobile'
@@ -262,13 +262,14 @@ async function login() {
   const btn = document.getElementById('login-btn');
   btn.textContent = 'Connecting...'; btn.disabled = true;
   try {
-    const [sr, br, fr, er, cr, lr] = await Promise.all([
+    const [sr, br, fr, er, cr, lr, orr] = await Promise.all([
       fetch(API + '/api/stats?password=' + encodeURIComponent(pwd)),
       fetch(API + '/api/bookings?password=' + encodeURIComponent(pwd)),
       fetch(API + '/api/feedback?password=' + encodeURIComponent(pwd)),
       fetch(API + '/api/expenses?password=' + encodeURIComponent(pwd)),
       fetch(API + '/api/site-config'),
       fetch(API + '/api/locations?all=1'),
+      fetch(API + '/api/outreach?password=' + encodeURIComponent(pwd)),
     ]);
     if (sr.status === 401) { showErr('Wrong password.'); btn.textContent = 'Access Dashboard'; btn.disabled = false; return; }
     stats = await sr.json();
@@ -277,6 +278,7 @@ async function login() {
     expenses = await er.json();
     siteConfig = await cr.json();
     locationsList = await lr.json();
+    outreach = await orr.json();
 
     if (siteConfig.businessName) { document.getElementById('sb-name').textContent = siteConfig.businessName; document.title = siteConfig.businessName + ' — Admin'; }
 
@@ -769,6 +771,30 @@ function typeSummaryCell(c) {
   if (!parts.length) return '—';
   return multi ? `<div style="display:flex;flex-direction:column;gap:3px">${parts.map(pill).join('')}</div>` : pill(parts[0]);
 }
+// Hours left before a win-back/review send can be repeated for this phone —
+// null if it's never been sent (or the 24h window has already passed).
+function outreachCooldownMs(phone, type) {
+  const key = (phone || '').replace(/\D/g, '').slice(-10);
+  if (!key) return null;
+  const entries = outreach.filter((o) => o.phone === key && o.type === type);
+  if (!entries.length) return null;
+  const latestMs = Math.max(...entries.map((o) => new Date(o.sentAt).getTime()));
+  const remaining = latestMs + 24 * 60 * 60 * 1000 - Date.now();
+  return remaining > 0 ? remaining : null;
+}
+function outreachBtn(phone, name, type, small) {
+  const cooling = outreachCooldownMs(phone, type);
+  const cfg = type === 'winback'
+    ? { icon: '📲', label: 'Win-Back', color: 'var(--primary)', bg: 'var(--primary-glow)', fn: 'sendWinback' }
+    : { icon: '⭐', label: 'Review', color: 'var(--yellow)', bg: 'var(--yellow-bg)', fn: 'sendReview' };
+  const pad = small ? '5px 11px' : '7px 14px';
+  const fontSize = small ? '11px' : '12px';
+  if (cooling) {
+    const hoursLeft = Math.ceil(cooling / (60 * 60 * 1000));
+    return `<span title="Sent — can resend in ${hoursLeft}h" style="padding:${pad};border-radius:${small ? '7px' : '8px'};border:1.5px solid var(--border2);background:var(--bg3);color:var(--text3);font-size:${fontSize};font-weight:700;white-space:nowrap;display:inline-block">✓ Sent</span>`;
+  }
+  return `<button onclick="${cfg.fn}('${phone}','${name.replace(/'/g, "\\'")}',this)" style="padding:${pad};border-radius:${small ? '7px' : '8px'};border:1.5px solid ${cfg.color};background:${cfg.bg};color:${cfg.color};font-family:inherit;font-size:${fontSize};font-weight:700;cursor:pointer;white-space:nowrap">${cfg.icon} ${cfg.label}</button>`;
+}
 function renderClients() {
   const clientMap = {};
   bookings.filter((b) => b.status === 'confirmed' || b.status === 'noshow').forEach((b) => {
@@ -815,8 +841,8 @@ function renderClients() {
             </div>
             ${!isNoShowOnly ? `<div class="mob-card-meta" style="margin-top:6px">${topService ? topService[0] + ' · ' : ''}${sourceLabel}<br>${typeSummaryLine(c)} · Last: ${fmtDate(c.lastVisit)}</div>${notesLine({ notes: c.latestNotes })}` : ''}
             <div class="mob-card-actions">
-              ${c.phone !== '—' ? `<button onclick="sendWinback('${c.phone}','${c.name.replace(/'/g,"\\'")}',this)" style="padding:7px 14px;border-radius:8px;border:1.5px solid var(--primary);background:var(--primary-glow);color:var(--primary);font-family:inherit;font-size:12px;font-weight:700;cursor:pointer">📲 Win-Back</button>` : ''}
-              ${c.phone !== '—' ? `<button onclick="sendReview('${c.phone}','${c.name.replace(/'/g,"\\'")}',this)" style="padding:7px 14px;border-radius:8px;border:1.5px solid var(--yellow);background:var(--yellow-bg);color:var(--yellow);font-family:inherit;font-size:12px;font-weight:700;cursor:pointer">⭐ Review</button>` : ''}
+              ${c.phone !== '—' ? outreachBtn(c.phone, c.name, 'winback', false) : ''}
+              ${c.phone !== '—' ? outreachBtn(c.phone, c.name, 'review', false) : ''}
               ${c.latestConfirmedId ? `<button onclick="markNoShow('${c.latestConfirmedId}')" style="padding:7px 14px;border-radius:8px;border:1.5px solid var(--red);background:var(--red-bg);color:var(--red);font-family:inherit;font-size:12px;font-weight:700;cursor:pointer">No-Show</button>` : ''}
             </div>
           </div>`;
@@ -843,8 +869,8 @@ function renderClients() {
             <td style="color:var(--text3);font-size:12px">${fmtDate(c.firstVisit)}</td>
             <td style="color:${c.lastVisit === new Date().toISOString().split('T')[0] ? 'var(--green)' : 'var(--text3)'};font-size:12px">${fmtDate(c.lastVisit)}</td>
             <td><div style="display:flex;flex-direction:column;gap:6px">
-              ${c.phone !== '—' ? `<button onclick="sendWinback('${c.phone}','${c.name.replace(/'/g,"\\'")}',this)" style="padding:5px 11px;border-radius:7px;border:1.5px solid var(--primary);background:var(--primary-glow);color:var(--primary);font-family:inherit;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap">📲 Win-Back</button>` : ''}
-              ${c.phone !== '—' ? `<button onclick="sendReview('${c.phone}','${c.name.replace(/'/g,"\\'")}',this)" style="padding:5px 11px;border-radius:7px;border:1.5px solid var(--yellow);background:var(--yellow-bg);color:var(--yellow);font-family:inherit;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap">⭐ Review</button>` : ''}
+              ${c.phone !== '—' ? outreachBtn(c.phone, c.name, 'winback', true) : ''}
+              ${c.phone !== '—' ? outreachBtn(c.phone, c.name, 'review', true) : ''}
               ${c.latestConfirmedId ? `<button onclick="markNoShow('${c.latestConfirmedId}')" style="padding:5px 11px;border-radius:7px;border:1.5px solid var(--red);background:var(--red-bg);color:var(--red);font-family:inherit;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap">No-Show</button>` : ''}
             </div></td>
           </tr>`;
@@ -1030,16 +1056,20 @@ async function sendWinback(phone, name, btn) {
   btn.textContent = 'Sending…'; btn.disabled = true;
   const r = await fetch(API + '/api/winback?password=' + encodeURIComponent(pwd), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ phone, customerName: name }) });
   const d = await r.json();
-  if (d.success) { btn.textContent = '✓ Sent!'; btn.style.borderColor = 'var(--green)'; btn.style.color = 'var(--green)'; btn.style.background = 'var(--green-bg)'; }
-  else { btn.textContent = 'Failed'; btn.disabled = false; }
+  if (d.success) {
+    outreach = await (await fetch(API + '/api/outreach?password=' + encodeURIComponent(pwd))).json();
+    renderClients();
+  } else { btn.textContent = 'Failed'; btn.disabled = false; }
 }
 
 async function sendReview(phone, name, btn) {
   btn.textContent = 'Sending…'; btn.disabled = true;
   const r = await fetch(API + '/api/send-review?password=' + encodeURIComponent(pwd), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ phone, customerName: name }) });
   const d = await r.json();
-  if (d.success) { btn.textContent = '✓ Sent!'; btn.style.borderColor = 'var(--yellow)'; btn.style.color = 'var(--yellow)'; btn.style.background = 'var(--yellow-bg)'; }
-  else { btn.textContent = 'Failed'; btn.disabled = false; }
+  if (d.success) {
+    outreach = await (await fetch(API + '/api/outreach?password=' + encodeURIComponent(pwd))).json();
+    renderClients();
+  } else { btn.textContent = 'Failed'; btn.disabled = false; }
 }
 
 async function addTip(id, btn) {
