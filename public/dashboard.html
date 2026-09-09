@@ -253,7 +253,7 @@ const API = /\bonrender\.com$/.test(location.hostname) || location.hostname === 
 let pwd = '', stats = null, bookings = [], feedback = [], expenses = [], outreach = [];
 let siteConfig = null, locationsList = [];
 let currentPage = 'overview', currentPeriod = 'today', currentBookingsFilter = 'all';
-let currentBlockScope = 'master'; // 'master' | 'location-a' | 'location-b' | 'mobile'
+let currentBlockScope = 'master'; // 'master' | 'location-a' | 'location-b' | 'mobile' | 'pickup-dropoff'
 let aiHistory = [], aiPendingPatch = null;
 
 async function login() {
@@ -1093,6 +1093,7 @@ async function addTip(id, btn) {
 function blockScopeName(scope) {
   if (scope === 'master') return 'All Locations';
   if (scope === 'mobile') return 'Mobile';
+  if (scope === 'pickup-dropoff') return 'Pickup & Drop-off';
   const loc = locationsList.find((l) => l.id === scope);
   return loc ? loc.name : scope;
 }
@@ -1108,6 +1109,7 @@ function renderAvailability(scope) {
     <button style="${tabStyle('location-a')}" onclick="renderAvailability('location-a')">📍 ${blockScopeName('location-a')}</button>
     <button style="${tabStyle('location-b')}" onclick="renderAvailability('location-b')">📍 ${blockScopeName('location-b')}</button>
     <button style="${tabStyle('mobile')}" onclick="renderAvailability('mobile')">🚐 Mobile</button>
+    <button style="${tabStyle('pickup-dropoff')}" onclick="renderAvailability('pickup-dropoff')">🚚 Pickup &amp; Drop-off</button>
   </div>`;
   const scopeDesc = isMaster ? 'Blocks every location and mobile at once — for holidays or days fully closed.' : `Only blocks ${blockScopeName(currentBlockScope)} — everywhere else stays open for booking.`;
 
