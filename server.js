@@ -594,6 +594,33 @@ app.post("/api/sms-webhook", async (req, res) => {
   res.set("Content-Type", "text/xml").send("<Response></Response>");
 });
 
+// Twilio webhook — set as the Twilio number's "A call comes in" voice
+// webhook. The owner's real cell (the number customers actually call) is
+// set to forward to this Twilio number on no-answer, so by the time a call
+// reaches here it already rang the owner's real phone and went unanswered —
+// just play the message and text the caller back.
+app.post("/api/voice-incoming", async (req, res) => {
+  const from = req.body.From;
+  const twiml = new twilio.twiml.VoiceResponse();
+
+  twiml.say(
+    `Sorry we missed your call at ${bizName()}. We just sent you a text — reply there and we'll get back to you, or book online any time at ski dock why why see dot see a, slash book.`
+  );
+
+  if (from && twilioClient) {
+    try {
+      await twilioClient.messages.create({
+        body: `Hi, sorry we missed your call at ${bizName()}! Text us here and we'll reply, or book online: https://skidocyyc.ca/book`,
+        from: TWILIO_PHONE_NUMBER,
+        to: from,
+      });
+      console.log(`✓ Missed-call text sent to ${from}`);
+    } catch (err) { console.error(`✗ Missed-call SMS failed:`, err.message); }
+  }
+
+  res.set("Content-Type", "text/xml").send(twiml.toString());
+});
+
 app.get("/api/bookings", (req, res) => {
   if (req.query.password !== ADMIN_PASSWORD) return res.status(401).json({ error: "Unauthorized" });
   res.json(db.get("bookings").value().slice().reverse());
