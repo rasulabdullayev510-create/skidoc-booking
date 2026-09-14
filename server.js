@@ -594,49 +594,6 @@ app.post("/api/sms-webhook", async (req, res) => {
   res.set("Content-Type", "text/xml").send("<Response></Response>");
 });
 
-// Twilio webhook — set as the phone number's "A call comes in" voice
-// webhook. Rings the owner's real phone; falls through to /api/voice-fallback
-// if it isn't answered in time.
-app.post("/api/voice-incoming", (req, res) => {
-  const twiml = new twilio.twiml.VoiceResponse();
-
-  if (OWNER_PHONE) {
-    const dial = twiml.dial({ timeout: 25, action: "/api/voice-fallback", method: "POST" });
-    dial.number(OWNER_PHONE);
-  } else {
-    twiml.say(`Thanks for calling ${bizName()}. Please text us at this number and we'll get back to you, or book online at ${bizName()}.ca slash book.`);
-  }
-
-  res.set("Content-Type", "text/xml").send(twiml.toString());
-});
-
-// Twilio webhook — Dial's `action` callback, fires once the owner's phone
-// stops ringing. DialCallStatus is "completed" if the owner answered; any
-// other status (no-answer, busy, failed, canceled) means it was missed.
-app.post("/api/voice-fallback", async (req, res) => {
-  const { DialCallStatus, From } = req.body;
-  const twiml = new twilio.twiml.VoiceResponse();
-
-  if (DialCallStatus !== "completed") {
-    twiml.say(
-      `Sorry we missed your call at ${bizName()}. We just sent you a text — reply there and we'll get back to you, or book online any time at ski dock why why see dot see a, slash book.`
-    );
-
-    if (From && twilioClient) {
-      try {
-        await twilioClient.messages.create({
-          body: `Hi, sorry we missed your call at ${bizName()}! Text us here and we'll reply, or book online: https://skidocyyc.ca/book`,
-          from: TWILIO_PHONE_NUMBER,
-          to: From,
-        });
-        console.log(`✓ Missed-call text sent to ${From}`);
-      } catch (err) { console.error(`✗ Missed-call SMS failed:`, err.message); }
-    }
-  }
-
-  res.set("Content-Type", "text/xml").send(twiml.toString());
-});
-
 app.get("/api/bookings", (req, res) => {
   if (req.query.password !== ADMIN_PASSWORD) return res.status(401).json({ error: "Unauthorized" });
   res.json(db.get("bookings").value().slice().reverse());
