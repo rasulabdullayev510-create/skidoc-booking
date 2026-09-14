@@ -603,7 +603,7 @@ app.post("/api/voice-incoming", async (req, res) => {
   const from = req.body.From;
   const twiml = new twilio.twiml.VoiceResponse();
 
-  const message = `Sorry, we're unable to reach the phone right now. Feel free to text 825-521-2075 and we'll get back to you as soon as possible, or book online: https://skidocyyc.ca/book`;
+  const message = `Sorry, we're unable to reach the phone right now. Feel free to text 825-521-2075 and we'll get back to you as soon as possible, or book online: skidocyyc.ca/book`;
 
   twiml.say({ voice: "Polly.Joanna" }, message);
 
