@@ -695,7 +695,9 @@ function renderBookings(filter) {
   currentBookingsFilter = filter;
   const online = bookings.filter((b) => b.source !== 'manual');
   const manual = bookings.filter((b) => b.source === 'manual');
-  const list = filter === 'online' ? online : filter === 'manual' ? manual : bookings;
+  const list = (filter === 'online' ? online : filter === 'manual' ? manual : bookings)
+    .slice()
+    .sort((a, b) => b.date.localeCompare(a.date) || b.time.localeCompare(a.time));
   const tabStyle = (f) => `padding:8px 18px;border-radius:8px;border:1.5px solid ${filter === f ? 'var(--primary)' : 'var(--border2)'};background:${filter === f ? 'var(--primary-glow)' : 'transparent'};color:${filter === f ? 'var(--primary)' : 'var(--text2)'};font-family:inherit;font-size:13px;font-weight:600;cursor:pointer;transition:all 0.15s`;
   const mob = window.innerWidth < 640;
 
