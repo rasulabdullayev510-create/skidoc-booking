@@ -605,7 +605,16 @@ app.post("/api/voice-incoming", async (req, res) => {
 
   const message = `Sorry, we're unable to reach the phone right now. Feel free to text 825-521-2075 and we'll get back to you as soon as possible, or book online: skidocyyc.ca/book`;
 
-  twiml.say({ voice: "Polly.Joanna" }, message);
+  // Split into short SSML sentences with explicit pauses — a single long
+  // <Say> string ran the sentences together with no breathing room, and
+  // spelling the phone number/URL out digit-by-digit reads far more
+  // naturally than letting the TTS engine guess how to say them.
+  const say = twiml.say({ voice: "Google.en-US-Chirp3-HD-Aoede" });
+  say.s("Sorry, we're unable to reach the phone right now.");
+  say.break({ time: "500ms" });
+  say.s("Feel free to shoot us a text at 8 2 5, 5 2 1, 2 0 7 5, and we'll get back to you as soon as possible.");
+  say.break({ time: "500ms" });
+  say.s("Or feel free to make your booking at skidocyyc dot ca slash book.");
 
   if (from && twilioClient) {
     try {
