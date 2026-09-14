@@ -603,15 +603,14 @@ app.post("/api/voice-incoming", async (req, res) => {
   const from = req.body.From;
   const twiml = new twilio.twiml.VoiceResponse();
 
-  twiml.say(
-    { voice: "Polly.Joanna" },
-    `Sorry, we're unable to reach the phone right now. Feel free to send a text to 8 2 5, 5 2 1, 2 0 7 5, and we'll get back to you as soon as possible, or you can make your booking at ski dock why why see dot see a, slash book.`
-  );
+  const message = `Sorry, we're unable to reach the phone right now. Feel free to text 825-521-2075 and we'll get back to you as soon as possible, or book online: https://skidocyyc.ca/book`;
+
+  twiml.say({ voice: "Polly.Joanna" }, message);
 
   if (from && twilioClient) {
     try {
       await twilioClient.messages.create({
-        body: `Sorry, we're unable to reach the phone right now. Feel free to text 825-521-2075 and we'll get back to you as soon as possible, or book online: https://skidocyyc.ca/book`,
+        body: message,
         from: TWILIO_PHONE_NUMBER,
         to: from,
       });
