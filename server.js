@@ -754,6 +754,33 @@ app.delete("/api/bookings/:id", (req, res) => {
   res.json({ success: true });
 });
 
+// Manual edit — lets the owner correct a customer's name, phone, or any
+// other detail directly, for one booking at a time.
+app.put("/api/bookings/:id", (req, res) => {
+  if (req.query.password !== ADMIN_PASSWORD) return res.status(401).json({ error: "Unauthorized" });
+  const booking = db.get("bookings").find({ id: req.params.id }).value();
+  if (!booking) return res.status(404).json({ error: "Not found" });
+  const { customerName, phone, email, date, time, serviceName, servicePrice, notes } = req.body;
+  const updates = {};
+  if (customerName !== undefined && customerName.trim()) updates.customerName = customerName.trim();
+  if (phone !== undefined) {
+    let p = (phone || "").toString().replace(/[^0-9+]/g, "");
+    if (p.length === 10) p = "+1" + p;
+    else if (p.length === 11 && p[0] === "1") p = "+" + p;
+    else if (p.length > 0 && !p.startsWith("+")) p = "+" + p;
+    updates.phone = p || null;
+  }
+  if (email !== undefined) updates.email = email.trim() || null;
+  if (date !== undefined && date) updates.date = date;
+  if (time !== undefined && time) updates.time = time;
+  if (serviceName !== undefined && serviceName.trim()) updates.serviceName = serviceName.trim();
+  if (servicePrice !== undefined) updates.servicePrice = Number(servicePrice) || 0;
+  if (notes !== undefined) updates.notes = notes.trim() || null;
+  db.get("bookings").find({ id: req.params.id }).assign(updates).write();
+  console.log(`✓ Booking edited by admin: ${req.params.id}`);
+  res.json({ success: true });
+});
+
 app.post("/api/bookings/:id/noshow", (req, res) => {
   if (req.query.password !== ADMIN_PASSWORD) return res.status(401).json({ error: "Unauthorized" });
   const booking = db.get("bookings").find({ id: req.params.id }).value();

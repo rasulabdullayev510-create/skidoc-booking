@@ -240,6 +240,19 @@ tr:hover td{background:rgba(255,255,255,0.02)}
   </div>
 
   <div class="main" id="main"></div>
+
+  <div id="edit-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:1000;align-items:center;justify-content:center;padding:20px" onclick="if(event.target===this)closeEditModal()">
+    <div style="background:var(--bg2);border:1px solid var(--border2);border-radius:14px;padding:28px;max-width:420px;width:100%;max-height:85vh;overflow-y:auto">
+      <h3 style="margin-bottom:4px" id="edit-modal-title">Edit</h3>
+      <p style="font-size:12px;color:var(--text3);margin-bottom:18px" id="edit-modal-sub"></p>
+      <div id="edit-modal-fields"></div>
+      <div style="margin-top:20px;display:flex;gap:10px">
+        <button class="btn-sm" style="background:var(--bg3);color:var(--text)" onclick="closeEditModal()">Cancel</button>
+        <button class="btn-sm" onclick="saveEditModal()">Save</button>
+      </div>
+      <div class="form-msg" id="edit-modal-msg"></div>
+    </div>
+  </div>
 </div>
 
 <script>
@@ -251,6 +264,7 @@ const API = /\bonrender\.com$/.test(location.hostname) || location.hostname === 
   : 'https://skidoc-booking-eblt.onrender.com';
 
 let pwd = '', stats = null, bookings = [], feedback = [], expenses = [], outreach = [];
+let lastClientMap = {}, editModalTarget = null;
 let siteConfig = null, locationsList = [];
 let currentPage = 'overview', currentPeriod = 'today', currentBookingsFilter = 'all';
 let currentBlockScope = 'master'; // 'master' | 'location-a' | 'location-b' | 'mobile' | 'pickup-dropoff'
@@ -713,6 +727,7 @@ function renderBookings(filter) {
           <div class="mob-card-meta">${b.serviceName}<br>${typeBadge(b)}<br>${b.date} · ${fmt12(b.time)} · <span style="color:var(--green);font-weight:700">$${b.servicePrice}</span>${tipLine}</div>
           ${notesLine(b)}
           <div class="mob-card-actions">
+            <button onclick="openEditBookingModal('${b.id}')" style="padding:7px 14px;border-radius:8px;border:1.5px solid var(--text3);background:var(--bg3);color:var(--text3);font-family:inherit;font-size:12px;font-weight:700;cursor:pointer">✎ Edit</button>
             ${b.status === 'confirmed' ? `<button onclick="addTip('${b.id}',this)" style="padding:7px 14px;border-radius:8px;border:1.5px solid var(--yellow);background:var(--yellow-bg);color:var(--yellow);font-family:inherit;font-size:12px;font-weight:700;cursor:pointer">${b.tipAmount ? 'Edit Tip' : '+ Tip'}</button>
             <button onclick="markNoShow('${b.id}')" style="padding:7px 14px;border-radius:8px;border:1.5px solid var(--red);background:var(--red-bg);color:var(--red);font-family:inherit;font-size:12px;font-weight:700;cursor:pointer">No-Show</button>` : ''}
             <button onclick="deleteBooking('${b.id}','${b.customerName.replace(/'/g,"\\'")}')" style="padding:7px 14px;border-radius:8px;border:1.5px solid var(--text3);background:var(--bg3);color:var(--text3);font-family:inherit;font-size:12px;font-weight:700;cursor:pointer">🗑 Delete</button>
@@ -725,6 +740,7 @@ function renderBookings(filter) {
           const statusBadge = b.status === 'noshow' ? `<span class="badge badge-noshow">No-Show</span>` : `<span class="badge badge-${b.status}">${b.status.replace(/_/g,' ')}</span>`;
           const priceCell = b.tipAmount ? `<div style="font-weight:700;color:var(--green)">$${b.servicePrice}</div><div style="font-size:11px;color:var(--yellow);font-weight:700">+$${b.tipAmount} tip</div>` : `<span style="font-weight:700;color:var(--green)">$${b.servicePrice}</span>`;
           const actionCell = `<div style="display:flex;gap:6px;flex-wrap:wrap">
+                <button onclick="openEditBookingModal('${b.id}')" style="padding:5px 10px;border-radius:7px;border:1.5px solid var(--text3);background:var(--bg3);color:var(--text3);font-family:inherit;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap">✎ Edit</button>
                 ${b.status === 'confirmed' ? `<button onclick="addTip('${b.id}',this)" style="padding:5px 10px;border-radius:7px;border:1.5px solid var(--yellow);background:var(--yellow-bg);color:var(--yellow);font-family:inherit;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap">${b.tipAmount ? 'Edit Tip' : '+ Tip'}</button>
                 <button onclick="markNoShow('${b.id}')" style="padding:5px 10px;border-radius:7px;border:1.5px solid var(--red);background:var(--red-bg);color:var(--red);font-family:inherit;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap">No-Show</button>` : ''}
                 <button onclick="deleteBooking('${b.id}','${b.customerName.replace(/'/g,"\\'")}')" style="padding:5px 10px;border-radius:7px;border:1.5px solid var(--text3);background:var(--bg3);color:var(--text3);font-family:inherit;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap">🗑 Delete</button>
@@ -804,9 +820,10 @@ function renderClients() {
     const digits = b.phone ? b.phone.replace(/\D/g, '') : '';
     const key = digits ? digits.slice(-10) : '__' + b.customerName.toLowerCase().trim();
     if (!clientMap[key]) {
-      clientMap[key] = { name: b.customerName, phone: b.phone || '—', email: b.email || null, visits: 0, noshowCount: 0, totalSpent: 0, services: {}, firstVisit: b.date, lastVisit: b.date, onlineCount: 0, manualCount: 0, mobileCount: 0, pickupCount: 0, inShopCount: 0, latestConfirmedId: null, latestConfirmedDate: null, latestNotes: null };
+      clientMap[key] = { key, name: b.customerName, phone: b.phone || '—', email: b.email || null, visits: 0, noshowCount: 0, totalSpent: 0, services: {}, firstVisit: b.date, lastVisit: b.date, onlineCount: 0, manualCount: 0, mobileCount: 0, pickupCount: 0, inShopCount: 0, latestConfirmedId: null, latestConfirmedDate: null, latestNotes: null, bookingIds: [] };
     }
     const c = clientMap[key];
+    c.bookingIds.push(b.id);
     if (b.status === 'confirmed') {
       c.visits++; c.totalSpent += Number(b.servicePrice) || 0;
       c.services[b.serviceName] = (c.services[b.serviceName] || 0) + 1;
@@ -819,6 +836,7 @@ function renderClients() {
     if (b.date > c.lastVisit) c.lastVisit = b.date;
   });
 
+  lastClientMap = clientMap;
   const clients = Object.values(clientMap).sort((a, b) => (a.visits > 0) !== (b.visits > 0) ? (a.visits > 0 ? -1 : 1) : b.lastVisit.localeCompare(a.lastVisit));
   const mob = window.innerWidth < 640;
 
@@ -843,6 +861,7 @@ function renderClients() {
             </div>
             ${!isNoShowOnly ? `<div class="mob-card-meta" style="margin-top:6px">${topService ? topService[0] + ' · ' : ''}${sourceLabel}<br>${typeSummaryLine(c)} · Last: ${fmtDate(c.lastVisit)}</div>${notesLine({ notes: c.latestNotes })}` : ''}
             <div class="mob-card-actions">
+              <button onclick="openEditClientModal('${c.key.replace(/'/g, "\\'")}')" style="padding:7px 14px;border-radius:8px;border:1.5px solid var(--text3);background:var(--bg3);color:var(--text3);font-family:inherit;font-size:12px;font-weight:700;cursor:pointer">✎ Edit</button>
               ${c.phone !== '—' ? outreachBtn(c.phone, c.name, 'winback', false) : ''}
               ${c.phone !== '—' ? outreachBtn(c.phone, c.name, 'review', false) : ''}
               ${c.latestConfirmedId ? `<button onclick="markNoShow('${c.latestConfirmedId}')" style="padding:7px 14px;border-radius:8px;border:1.5px solid var(--red);background:var(--red-bg);color:var(--red);font-family:inherit;font-size:12px;font-weight:700;cursor:pointer">No-Show</button>` : ''}
@@ -871,6 +890,7 @@ function renderClients() {
             <td style="color:var(--text3);font-size:12px">${fmtDate(c.firstVisit)}</td>
             <td style="color:${c.lastVisit === new Date().toISOString().split('T')[0] ? 'var(--green)' : 'var(--text3)'};font-size:12px">${fmtDate(c.lastVisit)}</td>
             <td><div style="display:flex;flex-direction:column;gap:6px">
+              <button onclick="openEditClientModal('${c.key.replace(/'/g, "\\'")}')" style="padding:5px 11px;border-radius:7px;border:1.5px solid var(--text3);background:var(--bg3);color:var(--text3);font-family:inherit;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap">✎ Edit</button>
               ${c.phone !== '—' ? outreachBtn(c.phone, c.name, 'winback', true) : ''}
               ${c.phone !== '—' ? outreachBtn(c.phone, c.name, 'review', true) : ''}
               ${c.latestConfirmedId ? `<button onclick="markNoShow('${c.latestConfirmedId}')" style="padding:5px 11px;border-radius:7px;border:1.5px solid var(--red);background:var(--red-bg);color:var(--red);font-family:inherit;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap">No-Show</button>` : ''}
@@ -1052,6 +1072,95 @@ async function deleteBooking(id, name) {
     stats = await (await fetch(API + '/api/stats?password=' + encodeURIComponent(pwd))).json();
     showPage(currentPage);
   } else { alert(d.error || 'Failed to delete.'); }
+}
+
+function editField(id, label, value, type) {
+  const v = (value == null ? '' : value).toString().replace(/"/g, '&quot;');
+  return `<div class="field" style="margin-bottom:12px"><label>${label}</label><input type="${type || 'text'}" id="${id}" value="${v}"/></div>`;
+}
+
+function openEditBookingModal(id) {
+  const b = bookings.find((x) => x.id === id);
+  if (!b) return;
+  editModalTarget = { type: 'booking', ids: [id] };
+  document.getElementById('edit-modal-title').textContent = 'Edit Booking';
+  document.getElementById('edit-modal-sub').textContent = 'Changes are saved directly — no text is sent to the customer.';
+  document.getElementById('edit-modal-fields').innerHTML =
+    editField('edit-name', 'Customer Name', b.customerName) +
+    editField('edit-phone', 'Phone', b.phone) +
+    editField('edit-email', 'Email', b.email) +
+    editField('edit-date', 'Date', b.date, 'date') +
+    editField('edit-time', 'Time', b.time, 'time') +
+    editField('edit-service', 'Service', b.serviceName) +
+    editField('edit-price', 'Price ($)', b.servicePrice, 'number') +
+    editField('edit-notes', 'Notes', b.notes);
+  showEditModal();
+}
+
+function openEditClientModal(key) {
+  const c = lastClientMap[key];
+  if (!c) return;
+  editModalTarget = { type: 'client', ids: c.bookingIds.slice() };
+  document.getElementById('edit-modal-title').textContent = 'Edit Client';
+  document.getElementById('edit-modal-sub').textContent = `Updates all ${c.bookingIds.length} booking${c.bookingIds.length !== 1 ? 's' : ''} for this client. No text is sent.`;
+  document.getElementById('edit-modal-fields').innerHTML =
+    editField('edit-name', 'Customer Name', c.name) +
+    editField('edit-phone', 'Phone', c.phone === '—' ? '' : c.phone) +
+    editField('edit-email', 'Email', c.email);
+  showEditModal();
+}
+
+function showEditModal() {
+  const msg = document.getElementById('edit-modal-msg');
+  msg.style.display = 'none'; msg.textContent = '';
+  document.getElementById('edit-modal').style.display = 'flex';
+}
+function closeEditModal() {
+  document.getElementById('edit-modal').style.display = 'none';
+  editModalTarget = null;
+}
+
+async function saveEditModal() {
+  if (!editModalTarget) return;
+  const btn = document.querySelector('#edit-modal button[onclick="saveEditModal()"]');
+  const msg = document.getElementById('edit-modal-msg');
+  const body = {
+    customerName: document.getElementById('edit-name').value.trim(),
+    phone: document.getElementById('edit-phone').value.trim(),
+    email: document.getElementById('edit-email').value.trim(),
+  };
+  const dateEl = document.getElementById('edit-date');
+  if (dateEl) {
+    body.date = dateEl.value;
+    body.time = document.getElementById('edit-time').value;
+    body.serviceName = document.getElementById('edit-service').value.trim();
+    body.servicePrice = document.getElementById('edit-price').value;
+    body.notes = document.getElementById('edit-notes').value.trim();
+  }
+  btn.textContent = 'Saving...'; btn.disabled = true;
+  try {
+    let allOk = true;
+    for (const id of editModalTarget.ids) {
+      const r = await fetch(API + '/api/bookings/' + id + '?password=' + encodeURIComponent(pwd), {
+        method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
+      });
+      const d = await r.json();
+      if (!d.success) allOk = false;
+    }
+    if (allOk) {
+      const wasClient = editModalTarget.type === 'client';
+      bookings = await (await fetch(API + '/api/bookings?password=' + encodeURIComponent(pwd))).json();
+      stats = await (await fetch(API + '/api/stats?password=' + encodeURIComponent(pwd))).json();
+      closeEditModal();
+      showPage(wasClient ? 'clients' : 'bookings');
+    } else {
+      msg.className = 'form-msg fail'; msg.style.display = 'block'; msg.textContent = 'Some updates failed — try again.';
+      btn.textContent = 'Save'; btn.disabled = false;
+    }
+  } catch (e) {
+    msg.className = 'form-msg fail'; msg.style.display = 'block'; msg.textContent = 'Connection error.';
+    btn.textContent = 'Save'; btn.disabled = false;
+  }
 }
 
 async function sendWinback(phone, name, btn) {
