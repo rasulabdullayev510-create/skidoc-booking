@@ -819,11 +819,11 @@ function renderClients() {
     if (b.date > c.lastVisit) c.lastVisit = b.date;
   });
 
-  const clients = Object.values(clientMap).sort((a, b) => (a.visits > 0) !== (b.visits > 0) ? (a.visits > 0 ? -1 : 1) : b.totalSpent - a.totalSpent);
+  const clients = Object.values(clientMap).sort((a, b) => (a.visits > 0) !== (b.visits > 0) ? (a.visits > 0 ? -1 : 1) : b.lastVisit.localeCompare(a.lastVisit));
   const mob = window.innerWidth < 640;
 
   document.getElementById('main').innerHTML = `
-    <div class="page-hdr"><h1>Clients</h1><p>${clients.filter((c) => c.visits > 0).length} confirmed customers${clients.filter((c) => c.visits === 0 && c.noshowCount > 0).length > 0 ? ' · ' + clients.filter((c) => c.visits === 0 && c.noshowCount > 0).length + ' no-show only' : ''} · sorted by total spend</p></div>
+    <div class="page-hdr"><h1>Clients</h1><p>${clients.filter((c) => c.visits > 0).length} confirmed customers${clients.filter((c) => c.visits === 0 && c.noshowCount > 0).length > 0 ? ' · ' + clients.filter((c) => c.visits === 0 && c.noshowCount > 0).length + ' no-show only' : ''} · sorted by most recent visit</p></div>
     <div class="table-wrap">
       ${mob ? `<div class="mob-cards-wrap">${clients.length ? clients.map((c) => {
           const isNoShowOnly = c.visits === 0 && c.noshowCount > 0;
