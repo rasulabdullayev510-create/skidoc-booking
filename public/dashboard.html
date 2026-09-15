@@ -342,14 +342,18 @@ function fmt12(t) {
   return (hr > 12 ? hr - 12 : hr || 12) + ':' + m + ' ' + (hr >= 12 ? 'PM' : 'AM');
 }
 function fmtDate(d) { const [y, mo, day] = d.split('-'); return MONTHS[parseInt(mo) - 1] + ' ' + parseInt(day); }
-// The ski season runs Nov 26 -> May 27. If today falls inside a season,
-// use that one; otherwise (off-season) show the most recently completed one.
+// The ski season runs September -> May. If today falls inside a season,
+// use that one; in the short off-season gap (June - August), show the
+// upcoming season instead of the one that just finished.
 function getSeasonRange() {
   const now = new Date();
   const y = now.getFullYear();
-  const monthDay = (now.getMonth() + 1) * 100 + now.getDate();
-  const startYear = monthDay >= 1126 ? y : y - 1;
-  return { start: `${startYear}-11-26`, end: `${startYear + 1}-05-27` };
+  const m = now.getMonth() + 1; // 1-12
+  let startYear;
+  if (m >= 9) startYear = y;        // Sep - Dec: this season, already started
+  else if (m <= 5) startYear = y - 1; // Jan - May: season started last year
+  else startYear = y;                // Jun - Aug off-season: point at the upcoming season
+  return { start: `${startYear}-09-01`, end: `${startYear + 1}-05-31` };
 }
 function isMobileBooking(b) { return b.location === 'mobile'; }
 function isPickupDropoffBooking(b) { return b.location === 'pickup-dropoff'; }
@@ -393,7 +397,7 @@ function renderOverview(period) {
     <button style="${tabStyle('today')}" onclick="renderOverview('today')">Today</button>
     <button style="${tabStyle('week')}" onclick="renderOverview('week')">This Week</button>
     <button style="${tabStyle('30days')}" onclick="renderOverview('30days')">Past 30 Days</button>
-    <button style="${tabStyle('season')}" onclick="renderOverview('season')">Nov 26 – May 27</button>
+    <button style="${tabStyle('season')}" onclick="renderOverview('season')">Season (Sep–May)</button>
     <button style="${tabStyle('alltime')}" onclick="renderOverview('alltime')">All Time</button>
   </div>`;
 
@@ -589,7 +593,7 @@ function renderOverview(period) {
       <div class="charts-row">
         <div class="chart-card">
           <div class="card-title">Revenue by Month</div>
-          <div class="card-sub">Nov 26 – May 27</div>
+          <div class="card-sub">September – May</div>
           <canvas id="season-chart" height="100"></canvas>
         </div>
         <div class="chart-card">
