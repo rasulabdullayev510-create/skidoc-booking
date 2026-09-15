@@ -342,6 +342,15 @@ function fmt12(t) {
   return (hr > 12 ? hr - 12 : hr || 12) + ':' + m + ' ' + (hr >= 12 ? 'PM' : 'AM');
 }
 function fmtDate(d) { const [y, mo, day] = d.split('-'); return MONTHS[parseInt(mo) - 1] + ' ' + parseInt(day); }
+// The ski season runs Nov 26 -> May 27. If today falls inside a season,
+// use that one; otherwise (off-season) show the most recently completed one.
+function getSeasonRange() {
+  const now = new Date();
+  const y = now.getFullYear();
+  const monthDay = (now.getMonth() + 1) * 100 + now.getDate();
+  const startYear = monthDay >= 1126 ? y : y - 1;
+  return { start: `${startYear}-11-26`, end: `${startYear + 1}-05-27` };
+}
 function isMobileBooking(b) { return b.location === 'mobile'; }
 function isPickupDropoffBooking(b) { return b.location === 'pickup-dropoff'; }
 function escapeHtml(s) { return (s || '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
@@ -384,6 +393,7 @@ function renderOverview(period) {
     <button style="${tabStyle('today')}" onclick="renderOverview('today')">Today</button>
     <button style="${tabStyle('week')}" onclick="renderOverview('week')">This Week</button>
     <button style="${tabStyle('30days')}" onclick="renderOverview('30days')">Past 30 Days</button>
+    <button style="${tabStyle('season')}" onclick="renderOverview('season')">Nov 26 – May 27</button>
     <button style="${tabStyle('alltime')}" onclick="renderOverview('alltime')">All Time</button>
   </div>`;
 
@@ -548,6 +558,68 @@ function renderOverview(period) {
       });
       const cf = document.getElementById('conv-fill');
       if (cf) cf.style.width = Math.min(parseFloat(stats.convRate) * 10, 100) + '%';
+    }, 50);
+    return;
+  }
+
+  if (period === 'season') {
+    const { start: seasonStart, end: seasonEnd } = getSeasonRange();
+    const seasonBks = allConfirmed.filter((b) => b.date >= seasonStart && b.date <= seasonEnd);
+    const revenue = seasonBks.reduce((s, b) => s + b.servicePrice, 0);
+    const upcoming = seasonBks.filter((b) => b.date >= today).sort((a, b) => a.date.localeCompare(b.date) || a.time.localeCompare(b.time));
+    const months = [];
+    let cursor = new Date(seasonStart + 'T12:00:00');
+    const seasonEndDate = new Date(seasonEnd + 'T12:00:00');
+    while (cursor <= seasonEndDate) {
+      months.push(`${cursor.getFullYear()}-${String(cursor.getMonth() + 1).padStart(2, '0')}`);
+      cursor = new Date(cursor.getFullYear(), cursor.getMonth() + 1, 1);
+    }
+    const revenueByMonth = {};
+    months.forEach((m) => { revenueByMonth[m] = 0; });
+    seasonBks.forEach((b) => { const m = b.date.slice(0, 7); if (revenueByMonth[m] !== undefined) revenueByMonth[m] += b.servicePrice; });
+    document.getElementById('main').innerHTML = `
+      <div class="page-hdr"><h1>Overview</h1><p>Season — ${fmtDate(seasonStart)}, ${seasonStart.slice(0, 4)} to ${fmtDate(seasonEnd)}, ${seasonEnd.slice(0, 4)}</p></div>
+      ${tabs}
+      <div class="stats-row">
+        <div class="stat-card green"><div class="stat-lbl">Season Revenue</div><div class="stat-num green">$${revenue.toLocaleString()}</div><div class="stat-sub">Confirmed bookings</div></div>
+        <div class="stat-card blue"><div class="stat-lbl">Season Bookings</div><div class="stat-num blue">${seasonBks.length}</div><div class="stat-sub">Confirmed</div></div>
+        <div class="stat-card blue"><div class="stat-lbl">Upcoming</div><div class="stat-num blue">${upcoming.length}</div><div class="stat-sub">Still to come this season</div></div>
+        <div class="stat-card yellow"><div class="stat-lbl">Avg Rating</div><div class="stat-num yellow">${stats.avgRating || '—'}</div><div class="stat-sub">All-time average</div></div>
+      </div>
+      <div class="charts-row">
+        <div class="chart-card">
+          <div class="card-title">Revenue by Month</div>
+          <div class="card-sub">Nov 26 – May 27</div>
+          <canvas id="season-chart" height="100"></canvas>
+        </div>
+        <div class="chart-card">
+          <div class="card-title">Upcoming This Season</div>
+          <div class="card-sub">${upcoming.length} appointment${upcoming.length !== 1 ? 's' : ''} remaining</div>
+          <div class="schedule-list">
+            ${upcoming.length ? upcoming.slice(0, 8).map((b) => `<div class="sched-item">
+                <span class="sched-date">${fmtDate(b.date)}</span>
+                <span class="sched-time">${fmt12(b.time)}</span>
+                <div style="flex:1"><div class="sched-name">${b.customerName}</div><div class="sched-svc">${isMobileBooking(b) ? '🚗 ' + (b.address || 'Mobile') : b.serviceName}</div></div>
+                <span class="sched-price">$${b.servicePrice}</span>
+              </div>`).join('') : '<div class="no-sched">No more appointments this season</div>'}
+          </div>
+        </div>
+      </div>`;
+    setTimeout(() => {
+      const ctx = document.getElementById('season-chart');
+      if (!ctx) return;
+      const thisMonth = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`;
+      new Chart(ctx.getContext('2d'), {
+        type: 'bar',
+        data: { labels: months.map((m) => { const [y, mo] = m.split('-'); return MONTHS[parseInt(mo) - 1] + ` '${y.slice(2)}`; }),
+          datasets: [{ data: months.map((m) => revenueByMonth[m]),
+            backgroundColor: months.map((m) => m === thisMonth ? 'rgba(59,130,246,0.55)' : 'rgba(59,130,246,0.2)'),
+            borderColor: months.map((m) => m === thisMonth ? 'rgba(59,130,246,1)' : 'rgba(59,130,246,0.6)'),
+            borderWidth: 1.5, borderRadius: 6 }] },
+        options: { responsive: true, plugins: { legend: { display: false } }, scales: {
+          x: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { color: 'rgba(255,255,255,0.3)', font: { size: 11 } } },
+          y: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { color: 'rgba(255,255,255,0.3)', font: { size: 11 }, callback: (v) => '$' + v } } } },
+      });
     }, 50);
     return;
   }
