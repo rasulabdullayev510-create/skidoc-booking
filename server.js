@@ -138,6 +138,16 @@ function formatDate(dateStr) {
   return `${MONTH_NAMES[m - 1]} ${d}, ${y}`;
 }
 
+// GST (5%) starts applying to revenue reporting from this season onward —
+// a reporting adjustment only. It's never stored on the booking, never
+// added to the service price shown to the customer or in admin service
+// listings, and never applied to tips (not taxable) or bookings before this date.
+const GST_START_DATE = "2026-09-01";
+const GST_RATE = 0.05;
+function gstAdjustedPrice(booking) {
+  return booking.date >= GST_START_DATE ? booking.servicePrice * (1 + GST_RATE) : booking.servicePrice;
+}
+
 // Calgary wall-clock "now" as a naive Date, so comparisons against naive
 // date/time strings (which are always Calgary-local) stay correct regardless
 // of the server's own timezone (Render runs UTC) and DST.
@@ -917,8 +927,8 @@ app.get("/api/stats", (req, res) => {
   const now = getCalgaryNow();
   const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
 
-  const earnedRevenue = confirmed.filter((b) => b.date <= todayStr).reduce((s, b) => s + b.servicePrice + (b.tipAmount || 0), 0);
-  const upcomingRevenue = confirmed.filter((b) => b.date > todayStr).reduce((s, b) => s + b.servicePrice, 0);
+  const earnedRevenue = confirmed.filter((b) => b.date <= todayStr).reduce((s, b) => s + gstAdjustedPrice(b) + (b.tipAmount || 0), 0);
+  const upcomingRevenue = confirmed.filter((b) => b.date > todayStr).reduce((s, b) => s + gstAdjustedPrice(b), 0);
   const totalExpenses = expenses.reduce((s, e) => s + (Number(e.amount) || 0), 0);
   const netProfit = earnedRevenue - totalExpenses;
 
@@ -933,7 +943,7 @@ app.get("/api/stats", (req, res) => {
     const key = d.toISOString().split('T')[0];
     revenueByDay[key] = 0; viewsByDay[key] = 0;
   }
-  confirmed.forEach((b) => { if (revenueByDay[b.date] !== undefined) revenueByDay[b.date] += b.servicePrice; });
+  confirmed.forEach((b) => { if (revenueByDay[b.date] !== undefined) revenueByDay[b.date] += gstAdjustedPrice(b); });
   pageViews.forEach((v) => { if (viewsByDay[v.date] !== undefined) viewsByDay[v.date]++; });
 
   const totalViews = pageViews.length;
@@ -962,7 +972,7 @@ app.get("/api/analytics", (req, res) => {
   const bookings = db.get("bookings").value();
   const feedback = db.get("feedback").value();
   const confirmed = bookings.filter(b => b.status === "confirmed");
-  const revenue = confirmed.reduce((sum, b) => sum + b.servicePrice, 0);
+  const revenue = confirmed.reduce((sum, b) => sum + gstAdjustedPrice(b), 0);
   const byService = {};
   confirmed.forEach(b => { byService[b.serviceName] = (byService[b.serviceName] || 0) + 1; });
   const last14 = {};
@@ -970,7 +980,7 @@ app.get("/api/analytics", (req, res) => {
     const d = new Date(); d.setDate(d.getDate() - i);
     last14[d.toISOString().split('T')[0]] = 0;
   }
-  confirmed.forEach(b => { if (last14[b.date] !== undefined) last14[b.date] += b.servicePrice; });
+  confirmed.forEach(b => { if (last14[b.date] !== undefined) last14[b.date] += gstAdjustedPrice(b); });
   const byHour = {};
   confirmed.forEach(b => { const h = b.time.split(':')[0]; byHour[h] = (byHour[h] || 0) + 1; });
   const totalFeedback = feedback.length;

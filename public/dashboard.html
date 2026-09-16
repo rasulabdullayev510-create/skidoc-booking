@@ -342,6 +342,11 @@ function fmt12(t) {
   return (hr > 12 ? hr - 12 : hr || 12) + ':' + m + ' ' + (hr >= 12 ? 'PM' : 'AM');
 }
 function fmtDate(d) { const [y, mo, day] = d.split('-'); return MONTHS[parseInt(mo) - 1] + ' ' + parseInt(day); }
+// GST (5%) starts applying to revenue totals from this season onward —
+// a reporting-only adjustment. Never applied to the per-booking service
+// price shown in lists/tables/edit fields, only to summed revenue figures.
+const GST_START_DATE = '2026-09-01';
+function gstAdjustedPrice(b) { return b.date >= GST_START_DATE ? b.servicePrice * 1.05 : b.servicePrice; }
 // The ski season runs September -> May. If today falls inside a season,
 // use that one; in the short off-season gap (June - August), show the
 // upcoming season instead of the one that just finished.
@@ -403,7 +408,7 @@ function renderOverview(period) {
 
   if (period === 'today') {
     const todayBks = allConfirmed.filter((b) => b.date === today).sort((a, b) => a.time.localeCompare(b.time));
-    const revenue = todayBks.reduce((s, b) => s + b.servicePrice, 0);
+    const revenue = todayBks.reduce((s, b) => s + gstAdjustedPrice(b), 0);
     const mobileC = todayBks.filter(isMobileBooking).length;
     const dateStr = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
     document.getElementById('main').innerHTML = `
@@ -450,9 +455,9 @@ function renderOverview(period) {
     const mondayOffset = day === 0 ? -6 : 1 - day;
     const weekDays = Array.from({ length: 7 }, (_, i) => { const dd = new Date(); dd.setDate(dd.getDate() + mondayOffset + i); return dd.toISOString().split('T')[0]; });
     const weekBks = allConfirmed.filter((b) => b.date >= weekDays[0] && b.date <= weekDays[6]);
-    const revenue = weekBks.reduce((s, b) => s + b.servicePrice, 0);
+    const revenue = weekBks.reduce((s, b) => s + gstAdjustedPrice(b), 0);
     const upcoming = weekBks.filter((b) => b.date >= today).sort((a, b) => a.date.localeCompare(b.date) || a.time.localeCompare(b.time));
-    const upcomingRev = upcoming.reduce((s, b) => s + b.servicePrice, 0);
+    const upcomingRev = upcoming.reduce((s, b) => s + gstAdjustedPrice(b), 0);
     document.getElementById('main').innerHTML = `
       <div class="page-hdr"><h1>Overview</h1><p>This week at a glance</p></div>
       ${tabs}
@@ -487,7 +492,7 @@ function renderOverview(period) {
       new Chart(ctx.getContext('2d'), {
         type: 'bar',
         data: { labels: ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'], datasets: [{
-          data: weekDays.map((d) => weekBks.filter((b) => b.date === d).reduce((s, b) => s + b.servicePrice, 0)),
+          data: weekDays.map((d) => weekBks.filter((b) => b.date === d).reduce((s, b) => s + gstAdjustedPrice(b), 0)),
           backgroundColor: weekDays.map((d) => d === today ? 'rgba(59,130,246,0.55)' : 'rgba(59,130,246,0.2)'),
           borderColor: weekDays.map((d) => d === today ? 'rgba(59,130,246,1)' : 'rgba(59,130,246,0.6)'),
           borderWidth: 1.5, borderRadius: 6 }] },
@@ -503,7 +508,7 @@ function renderOverview(period) {
     const d30 = new Date(); d30.setDate(d30.getDate() - 29);
     const start30 = d30.toISOString().split('T')[0];
     const bks30 = allConfirmed.filter((b) => b.date >= start30);
-    const revenue = bks30.reduce((s, b) => s + b.servicePrice, 0);
+    const revenue = bks30.reduce((s, b) => s + gstAdjustedPrice(b), 0);
     const upcoming = allConfirmed.filter((b) => b.date >= today).sort((a, b) => a.date.localeCompare(b.date) || a.time.localeCompare(b.time));
     document.getElementById('main').innerHTML = `
       <div class="page-hdr"><h1>Overview</h1><p>Last 30 days performance</p></div>
@@ -569,7 +574,7 @@ function renderOverview(period) {
   if (period === 'season') {
     const { start: seasonStart, end: seasonEnd } = getSeasonRange();
     const seasonBks = allConfirmed.filter((b) => b.date >= seasonStart && b.date <= seasonEnd);
-    const revenue = seasonBks.reduce((s, b) => s + b.servicePrice, 0);
+    const revenue = seasonBks.reduce((s, b) => s + gstAdjustedPrice(b), 0);
     const upcoming = seasonBks.filter((b) => b.date >= today).sort((a, b) => a.date.localeCompare(b.date) || a.time.localeCompare(b.time));
     const months = [];
     let cursor = new Date(seasonStart + 'T12:00:00');
@@ -580,7 +585,7 @@ function renderOverview(period) {
     }
     const revenueByMonth = {};
     months.forEach((m) => { revenueByMonth[m] = 0; });
-    seasonBks.forEach((b) => { const m = b.date.slice(0, 7); if (revenueByMonth[m] !== undefined) revenueByMonth[m] += b.servicePrice; });
+    seasonBks.forEach((b) => { const m = b.date.slice(0, 7); if (revenueByMonth[m] !== undefined) revenueByMonth[m] += gstAdjustedPrice(b); });
     document.getElementById('main').innerHTML = `
       <div class="page-hdr"><h1>Overview</h1><p>Season — ${fmtDate(seasonStart)}, ${seasonStart.slice(0, 4)} to ${fmtDate(seasonEnd)}, ${seasonEnd.slice(0, 4)}</p></div>
       ${tabs}
@@ -901,7 +906,7 @@ function renderClients() {
     const c = clientMap[key];
     c.bookingIds.push(b.id);
     if (b.status === 'confirmed') {
-      c.visits++; c.totalSpent += Number(b.servicePrice) || 0;
+      c.visits++; c.totalSpent += gstAdjustedPrice(b) || 0;
       c.services[b.serviceName] = (c.services[b.serviceName] || 0) + 1;
       if (b.source === 'manual') c.manualCount++; else c.onlineCount++;
       if (isMobileBooking(b)) c.mobileCount++; else if (isPickupDropoffBooking(b)) c.pickupCount++; else c.inShopCount++;
