@@ -588,7 +588,7 @@ function renderSlots(slots) {
   }
   let html = '<div class="slots-grid">';
   slots.forEach((s) => {
-    if (s.status === 'booked') {
+    if (s.status === 'booked' || s.status === 'blocked') {
       html += '<div class="slot booked">' + fmt12(s.time) + '</div>';
     } else {
       const picked = state.time === s.time ? ' picked' : '';
