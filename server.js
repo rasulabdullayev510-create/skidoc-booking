@@ -116,15 +116,11 @@ const {
   ADMIN_PASSWORD = "skidoc2024",
   OWNER_PHONE,
 } = process.env;
-// `|| ` (not a destructuring default) so an env var left blank on Render
-// still falls back instead of silently producing a link with no domain.
-const BASE_URL = process.env.BASE_URL || "http://localhost:3004";
 
 const twilioClient = TWILIO_ACCOUNT_SID ? twilio(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN) : null;
 
 function generateToken() { return crypto.randomBytes(16).toString("hex"); }
 function generateShortId() { return crypto.randomBytes(3).toString("hex").toUpperCase(); }
-function getSurveyUrl(token) { return `${BASE_URL}/review?token=${token}`; }
 
 function formatTime(t) {
   const [h, m] = t.split(':');
@@ -231,8 +227,10 @@ async function sendCustomerOffer(booking, suggestedDate, suggestedTime) {
 async function sendReviewSMS(booking) {
   if (!twilioClient) { console.log(`[SMS SKIPPED] Review for ${booking.customerName}`); return; }
   const firstName = (booking.customerName || "there").trim().split(" ")[0];
+  // Straight to the Google review link — no in-between page, no star-rating
+  // step. Reuses the same link Site Editor > Socials keeps up to date.
   await twilioClient.messages.create({
-    body: `Hi ${firstName}! How was your experience at ${bizName()}? Your feedback helps us out tremendously.\n\nTap to rate (20 sec): ${getSurveyUrl(booking.reviewToken)}`,
+    body: `Hi ${firstName}! How was your experience at ${bizName()}? Your feedback helps us out tremendously.\n\nLeave us a quick review (20 sec): ${getConfig().googleReviewUrl}`,
     from: TWILIO_PHONE_NUMBER,
     to: booking.phone,
   });
