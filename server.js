@@ -246,7 +246,7 @@ async function sendWinbackSMS(phone, name) {
     ? `\n\nPickup & drop-off tuning is available too, we'll grab your gear and bring it back ready to ride.`
     : '';
   await twilioClient.messages.create({
-    body: `Hi ${firstName}, ski season is almost here! Once the snow hits, tune shops fill up fast, so now's the time to get your gear ready before the rush. Preseason discounts are on right now.${pickupLine}\n\nBook online: https://skidocyyc.ca/book${phoneLine}\n\nSee you on the hill!`,
+    body: `Hi ${firstName}, ski season is almost here! So now's the time to get your gear ready before the rush. Preseason discounts are on right now.${pickupLine}\n\nBook online: https://skidocyyc.ca/book${phoneLine}\n\nSee you on the hill!`,
     from: TWILIO_PHONE_NUMBER,
     to: phone,
   });
