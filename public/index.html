@@ -82,6 +82,7 @@ body{background:var(--bg);color:var(--ink);font-family:'Plus Jakarta Sans',sans-
 .svc-right{display:flex;align-items:center;gap:14px;flex-shrink:0}
 .svc-price{font-size:19px;font-weight:700;color:var(--ink);white-space:nowrap}
 .svc-price .from{font-size:10px;font-weight:600;color:var(--ink3);text-transform:uppercase;margin-right:2px}
+.svc-price.fee-price{font-size:15px}
 .svc-price .svc-was{font-size:13px;font-weight:600;color:var(--ink3);text-decoration:line-through;margin-right:6px}
 .ios-toggle{position:relative;display:inline-block;flex-shrink:0;width:51px;height:31px;border-radius:999px;background:#34c759;pointer-events:none;cursor:default}
 .ios-toggle .knob{position:absolute;top:2px;left:22px;width:27px;height:27px;border-radius:50%;background:#fff;box-shadow:0 2px 4px rgba(0,0,0,0.25)}
@@ -468,10 +469,10 @@ function svcCard(s, compact) {
 function pickupFeeBar() {
   const showWas = pickupDropoffFeeWas && pickupDropoffFeeWas > pickupDropoffFee;
   return `<div class="svc-list"><div class="svc-card has-qty">
-    <div><div class="svc-name-row"><span class="svc-name">Pickup and drop-off transportation fee</span></div></div>
+    <div><div class="svc-name-row"><span class="svc-name">Pickup and drop-off</span></div></div>
     <div class="svc-right">
-      <div class="svc-price">${showWas ? `<span class="svc-was">$${pickupDropoffFeeWas}</span>` : ''}$${pickupDropoffFee}</div>
-      <span class="ios-toggle" role="switch" aria-checked="true" aria-disabled="true" aria-label="Pickup and drop-off transportation fee, always on"><span class="knob"></span></span>
+      <div class="svc-price fee-price">${showWas ? `<span class="svc-was">$${pickupDropoffFeeWas}</span>` : ''}$${pickupDropoffFee}</div>
+      <span class="ios-toggle" role="switch" aria-checked="true" aria-disabled="true" aria-label="Pickup and drop-off fee, always on"><span class="knob"></span></span>
     </div>
   </div></div>`;
 }
