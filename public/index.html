@@ -82,6 +82,9 @@ body{background:var(--bg);color:var(--ink);font-family:'Plus Jakarta Sans',sans-
 .svc-right{display:flex;align-items:center;gap:14px;flex-shrink:0}
 .svc-price{font-size:19px;font-weight:700;color:var(--ink);white-space:nowrap}
 .svc-price .from{font-size:10px;font-weight:600;color:var(--ink3);text-transform:uppercase;margin-right:2px}
+.svc-price .svc-was{font-size:13px;font-weight:600;color:var(--ink3);text-decoration:line-through;margin-right:6px}
+.ios-toggle{position:relative;display:inline-block;flex-shrink:0;width:51px;height:31px;border-radius:999px;background:#34c759;pointer-events:none;cursor:default}
+.ios-toggle .knob{position:absolute;top:2px;left:22px;width:27px;height:27px;border-radius:50%;background:#fff;box-shadow:0 2px 4px rgba(0,0,0,0.25)}
 .qty-ctrl{display:flex;align-items:center;gap:8px;border:1.5px solid var(--rule);border-radius:999px;padding:4px}
 .qty-btn{width:26px;height:26px;border-radius:50%;border:none;background:var(--bg);color:var(--ink2);font-size:15px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.12s}
 .qty-btn:hover{background:var(--blue-mid);color:var(--blue-dark)}
@@ -281,7 +284,7 @@ body{background:var(--bg);color:var(--ink);font-family:'Plus Jakarta Sans',sans-
 const API = /\bonrender\.com$/.test(location.hostname) || location.hostname === 'localhost'
   ? window.location.origin
   : 'https://skidoc-booking-eblt.onrender.com';
-let services = [], mobileSurcharge = 10, mobileEnabled = true, pickupDropoffEnabled = false, pickupDropoffSurcharge = 15, locations = [];
+let services = [], mobileSurcharge = 10, mobileEnabled = true, pickupDropoffEnabled = false, pickupDropoffFee = 10, pickupDropoffFeeWas = 20, locations = [];
 let calMo = new Date(); calMo.setDate(1);
 
 const state = {
@@ -297,7 +300,7 @@ async function loadServices() {
   try {
     const r = await fetch(API + '/api/services');
     const data = await r.json();
-    services = data.services; mobileSurcharge = data.mobileSurcharge; mobileEnabled = data.mobileEnabled !== false; pickupDropoffEnabled = !!data.pickupDropoffEnabled; pickupDropoffSurcharge = data.pickupDropoffSurcharge;
+    services = data.services; mobileSurcharge = data.mobileSurcharge; mobileEnabled = data.mobileEnabled !== false; pickupDropoffEnabled = !!data.pickupDropoffEnabled; pickupDropoffFee = data.pickupDropoffFee; pickupDropoffFeeWas = data.pickupDropoffFeeWas;
     renderSvcs();
     renderLocations(); // mobileEnabled/pickupDropoffEnabled may have just changed — re-render the location cards
   } catch (e) {
@@ -435,7 +438,6 @@ function openDirections(address) {
 
 function priceFor(svc) {
   if (state.location === 'mobile') return svc.price + mobileSurcharge;
-  if (state.location === 'pickup-dropoff') return svc.id === 'performance-race-tune' ? 99 : svc.price + pickupDropoffSurcharge;
   return svc.price;
 }
 
@@ -461,19 +463,33 @@ function svcCard(s, compact) {
   </div>`;
 }
 
+// Looks like a service card, but its switch is locked on — customers can't
+// remove it, it just shows what the transportation charge is for.
+function pickupFeeBar() {
+  const showWas = pickupDropoffFeeWas && pickupDropoffFeeWas > pickupDropoffFee;
+  return `<div class="svc-list"><div class="svc-card has-qty">
+    <div><div class="svc-name-row"><span class="svc-name">Pickup and drop-off transportation fee</span></div></div>
+    <div class="svc-right">
+      <div class="svc-price">${showWas ? `<span class="svc-was">$${pickupDropoffFeeWas}</span>` : ''}$${pickupDropoffFee}</div>
+      <span class="ios-toggle" role="switch" aria-checked="true" aria-disabled="true" aria-label="Pickup and drop-off transportation fee, always on"><span class="knob"></span></span>
+    </div>
+  </div></div>`;
+}
+
 function renderSvcs() {
   const isMobile = state.location === 'mobile';
   const isPickupDropoff = state.location === 'pickup-dropoff';
   document.getElementById('svc-p-sub').textContent = isMobile
     ? `Mobile pricing shown below (+$${mobileSurcharge} per service).`
     : isPickupDropoff
-    ? `Pickup & drop-off pricing shown below — the extra charge covers transportation (+$${pickupDropoffSurcharge} per service).`
+    ? 'Regular service prices below, plus one flat transportation fee for pickup and drop-off.'
     : 'Add as many as you need — quantities and multiple services are welcome.';
 
   const packages = services.filter((s) => s.category === 'package');
   const singles = services.filter((s) => s.category !== 'package');
 
-  let html = '<div class="svc-section-lbl">Packages</div><div class="svc-list">' + packages.map((s) => svcCard(s, false)).join('') + '</div>';
+  let html = isPickupDropoff ? pickupFeeBar() : '';
+  html += '<div class="svc-section-lbl">Packages</div><div class="svc-list">' + packages.map((s) => svcCard(s, false)).join('') + '</div>';
   html += '<div class="svc-section-lbl">Individual Services</div><div class="svc-list svc-list-compact">' + singles.map((s) => svcCard(s, true)).join('') + '</div>';
   document.getElementById('svc-list').innerHTML = html;
 }
@@ -623,8 +639,15 @@ function cartLines() {
   }).filter(Boolean);
 }
 
+// One flat fee per pickup & drop-off booking, once there's at least one service.
+function cartLinesWithFee() {
+  const lines = cartLines();
+  if (state.location === 'pickup-dropoff' && lines.length) lines.push({ name: 'Transportation fee', qty: 1, price: pickupDropoffFee });
+  return lines;
+}
+
 function cartTotal() {
-  return cartLines().reduce((sum, l) => sum + l.price * l.qty, 0);
+  return cartLinesWithFee().reduce((sum, l) => sum + l.price * l.qty, 0);
 }
 
 function locationDisplayName() {
@@ -637,7 +660,7 @@ function locationDisplayName() {
 
 function updateSum() {
   const e = document.getElementById('sum-empty'), l = document.getElementById('sum-lines');
-  const lines = cartLines();
+  const lines = cartLinesWithFee();
   if (!state.location && !lines.length) { e.style.display = 'block'; l.style.display = 'none'; return; }
   e.style.display = 'none'; l.style.display = 'block';
 

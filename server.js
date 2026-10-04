@@ -55,7 +55,9 @@ db.defaults({
     mobileEnabled: true,
     mobileSurcharge: 10,
     pickupDropoffEnabled: false,
-    pickupDropoffSurcharge: 15,
+    // Flat per-booking transportation fee; "was" is shown crossed out (preseason price).
+    pickupDropoffFee: 10,
+    pickupDropoffFeeWas: 20,
     locations: [
       { id: "location-a", name: "Location A", address: "26 Val Gardena View SW, Calgary, AB T3H 5Z5", enabled: true },
       { id: "location-b", name: "Test Location", address: "Patina Dr SW, Calgary, AB", enabled: true },
@@ -93,8 +95,15 @@ db.defaults({
   if (cfg.pickupDropoffEnabled === undefined) {
     db.set("siteConfig.pickupDropoffEnabled", false).write();
   }
-  if (cfg.pickupDropoffSurcharge === undefined) {
-    db.set("siteConfig.pickupDropoffSurcharge", 15).write();
+  if (cfg.pickupDropoffFee === undefined) {
+    db.set("siteConfig.pickupDropoffFee", 10).write();
+  }
+  if (cfg.pickupDropoffFeeWas === undefined) {
+    db.set("siteConfig.pickupDropoffFeeWas", 20).write();
+  }
+  // Replaced by the flat fee above — drop it so nothing (or the AI assistant) edits a dead field.
+  if (cfg.pickupDropoffSurcharge !== undefined) {
+    db.unset("siteConfig.pickupDropoffSurcharge").write();
   }
 })();
 
@@ -103,7 +112,9 @@ function getServices() { return getConfig().services; }
 function getLocations() { return getConfig().locations; }
 function getEnabledLocations() { return getLocations().filter((l) => l.enabled !== false); }
 function getMobileSurcharge() { return getConfig().mobileSurcharge; }
-function getPickupDropoffSurcharge() { return getConfig().pickupDropoffSurcharge; }
+const PICKUP_FEE_ID = "pickup-dropoff-fee";
+function getPickupDropoffFee() { return getConfig().pickupDropoffFee; }
+function getPickupDropoffFeeWas() { return getConfig().pickupDropoffFeeWas; }
 function isMobileEnabled() { return getConfig().mobileEnabled !== false; }
 function isPickupDropoffEnabled() { return getConfig().pickupDropoffEnabled === true; }
 function bizName() { return getConfig().businessName || BUSINESS_NAME; }
@@ -252,7 +263,7 @@ async function sendWinbackSMS(phone, name) {
   });
 }
 
-app.get("/api/services", (req, res) => res.json({ services: getServices(), mobileSurcharge: getMobileSurcharge(), mobileEnabled: isMobileEnabled(), pickupDropoffEnabled: isPickupDropoffEnabled(), pickupDropoffSurcharge: getPickupDropoffSurcharge() }));
+app.get("/api/services", (req, res) => res.json({ services: getServices(), mobileSurcharge: getMobileSurcharge(), mobileEnabled: isMobileEnabled(), pickupDropoffEnabled: isPickupDropoffEnabled(), pickupDropoffFee: getPickupDropoffFee(), pickupDropoffFeeWas: getPickupDropoffFeeWas() }));
 app.get("/api/locations", (req, res) => res.json(req.query.all ? getLocations() : getEnabledLocations()));
 app.get("/api/info", (req, res) => res.json({ businessName: bizName() }));
 app.get("/api/site-config", (req, res) => res.json(getConfig()));
@@ -445,12 +456,13 @@ app.post("/api/bookings", async (req, res) => {
     const svc = getServices().find((s) => s.id === it.serviceId);
     if (!svc) return res.status(400).json({ error: `Unknown service: ${it.serviceId}` });
     const qty = Math.max(1, Math.min(10, Number(it.qty) || 1));
-    // Performance Race Tune is priced at a flat $99 for pickup & drop-off
-    // specifically (not base price + surcharge) — a one-off exception.
-    const unitPrice = isPickupDropoff && svc.id === "performance-race-tune"
-      ? 99
-      : svc.price + (isMobile ? getMobileSurcharge() : isPickupDropoff ? getPickupDropoffSurcharge() : 0);
+    const unitPrice = svc.price + (isMobile ? getMobileSurcharge() : 0);
     resolvedItems.push({ serviceId: svc.id, serviceName: svc.name, unitPrice, qty });
+  }
+  // Pickup & drop-off keeps regular service prices and adds one flat
+  // transportation fee per booking (not per service).
+  if (isPickupDropoff) {
+    resolvedItems.push({ serviceId: PICKUP_FEE_ID, serviceName: "Pickup & Drop-off Transportation Fee", unitPrice: getPickupDropoffFee(), qty: 1 });
   }
   const totalPrice = resolvedItems.reduce((sum, i) => sum + i.unitPrice * i.qty, 0);
 
@@ -465,7 +477,9 @@ app.post("/api/bookings", async (req, res) => {
     location,
     address: needsAddress ? address.trim() : null,
     items: resolvedItems,
-    serviceName: resolvedItems.map((i) => `${i.serviceName}${i.qty > 1 ? ` x${i.qty}` : ''}`).join(', '),
+    // The transport fee counts toward the total but isn't a service, so it
+    // stays out of the service name shown in texts and the admin lists.
+    serviceName: resolvedItems.filter((i) => i.serviceId !== PICKUP_FEE_ID).map((i) => `${i.serviceName}${i.qty > 1 ? ` x${i.qty}` : ''}`).join(', '),
     servicePrice: totalPrice,
     date, time, customerName, phone,
     email: email || null, notes: notes || null,
