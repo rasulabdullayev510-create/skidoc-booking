@@ -251,13 +251,14 @@ async function sendReviewSMS(booking) {
 async function sendWinbackSMS(phone, name) {
   if (!twilioClient) { console.log(`[SMS SKIPPED] Winback for ${name}`); return; }
   const firstName = (name || "there").trim().split(" ")[0];
-  const phoneLine = bizPhone() ? `\nCall/text: ${bizPhone()}` : '';
+  // Same-length labels so the two lines stay short (no wrapping) and the links/numbers start in the same spot.
+  const phoneLine = bizPhone() ? `\nCall: ${bizPhone()}` : '';
   // Only advertise pickup & drop-off while it's actually switched on in Site Editor.
   const pickupSentence = isPickupDropoffEnabled()
     ? ` Pickup and drop-off tuning is available with preseason discounts, we'll grab your gear and bring it back ready to ride!`
     : '';
   await twilioClient.messages.create({
-    body: `Hi ${firstName}, ski season is almost here! Now's the time to get your gear ready before the rush.${pickupSentence}\n\nBook online: https://skidocyyc.ca/book${phoneLine}\n\nSee you on the hill!`,
+    body: `Hi ${firstName}, ski season is almost here! Now's the time to get your gear ready before the rush.${pickupSentence}\n\nBook: https://skidocyyc.ca/book${phoneLine}\n\nSee you soon!\nSki Doc Calgary`,
     from: TWILIO_PHONE_NUMBER,
     to: phone,
   });
