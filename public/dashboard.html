@@ -341,6 +341,18 @@ function fmt12(t) {
   const [h, m] = t.split(':'); const hr = parseInt(h);
   return (hr > 12 ? hr - 12 : hr || 12) + ':' + m + ' ' + (hr >= 12 ? 'PM' : 'AM');
 }
+// "Today" as YYYY-MM-DD in Calgary time. new Date().toISOString() is the UTC date,
+// which flips to tomorrow around 6 PM here — right when evening appointments start.
+const CAL_TZ = 'America/Edmonton';
+function calDateStr(d) {
+  return new Intl.DateTimeFormat('en-CA', { timeZone: CAL_TZ, year: 'numeric', month: '2-digit', day: '2-digit' }).format(d || new Date());
+}
+// Shift a YYYY-MM-DD string by whole days (noon UTC keeps DST from ever changing the date).
+function addDaysStr(dateStr, n) {
+  const t = new Date(dateStr + 'T12:00:00Z');
+  t.setUTCDate(t.getUTCDate() + n);
+  return t.toISOString().slice(0, 10);
+}
 function fmtDate(d) { const [y, mo, day] = d.split('-'); return MONTHS[parseInt(mo) - 1] + ' ' + parseInt(day); }
 // GST (5%) starts applying to revenue totals from this season onward —
 // a reporting-only adjustment. Never applied to the per-booking service
@@ -395,7 +407,7 @@ function typeBadge(b) {
 function renderOverview(period) {
   period = period || currentPeriod;
   currentPeriod = period;
-  const today = new Date().toISOString().split('T')[0];
+  const today = calDateStr();
   const allConfirmed = bookings.filter((b) => b.status === 'confirmed');
   const tabStyle = (p) => `padding:8px 18px;border-radius:8px;border:1.5px solid ${period === p ? 'var(--primary)' : 'var(--border2)'};background:${period === p ? 'var(--primary-glow)' : 'transparent'};color:${period === p ? 'var(--primary)' : 'var(--text2)'};font-family:inherit;font-size:13px;font-weight:600;cursor:pointer;transition:all 0.15s`;
   const tabs = `<div style="display:flex;gap:8px;margin-bottom:28px;flex-wrap:wrap">
@@ -410,7 +422,7 @@ function renderOverview(period) {
     const todayBks = allConfirmed.filter((b) => b.date === today).sort((a, b) => a.time.localeCompare(b.time));
     const revenue = todayBks.reduce((s, b) => s + gstAdjustedPrice(b), 0);
     const mobileC = todayBks.filter(isMobileBooking).length;
-    const dateStr = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
+    const dateStr = new Date().toLocaleDateString('en-US', { timeZone: CAL_TZ, weekday: 'long', month: 'long', day: 'numeric' });
     document.getElementById('main').innerHTML = `
       <div class="page-hdr"><h1>Overview</h1><p>${dateStr}</p></div>
       ${tabs}
@@ -451,9 +463,9 @@ function renderOverview(period) {
   }
 
   if (period === 'week') {
-    const day = new Date().getDay();
+    const day = new Date(today + 'T12:00:00Z').getUTCDay();
     const mondayOffset = day === 0 ? -6 : 1 - day;
-    const weekDays = Array.from({ length: 7 }, (_, i) => { const dd = new Date(); dd.setDate(dd.getDate() + mondayOffset + i); return dd.toISOString().split('T')[0]; });
+    const weekDays = Array.from({ length: 7 }, (_, i) => addDaysStr(today, mondayOffset + i));
     const weekBks = allConfirmed.filter((b) => b.date >= weekDays[0] && b.date <= weekDays[6]);
     const revenue = weekBks.reduce((s, b) => s + gstAdjustedPrice(b), 0);
     const upcoming = weekBks.filter((b) => b.date >= today).sort((a, b) => a.date.localeCompare(b.date) || a.time.localeCompare(b.time));
@@ -505,8 +517,7 @@ function renderOverview(period) {
   }
 
   if (period === '30days') {
-    const d30 = new Date(); d30.setDate(d30.getDate() - 29);
-    const start30 = d30.toISOString().split('T')[0];
+    const start30 = addDaysStr(today, -29);
     const bks30 = allConfirmed.filter((b) => b.date >= start30);
     const revenue = bks30.reduce((s, b) => s + gstAdjustedPrice(b), 0);
     const upcoming = allConfirmed.filter((b) => b.date >= today).sort((a, b) => a.date.localeCompare(b.date) || a.time.localeCompare(b.time));
@@ -617,7 +628,7 @@ function renderOverview(period) {
     setTimeout(() => {
       const ctx = document.getElementById('season-chart');
       if (!ctx) return;
-      const thisMonth = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`;
+      const thisMonth = today.slice(0, 7);
       new Chart(ctx.getContext('2d'), {
         type: 'bar',
         data: { labels: months.map((m) => { const [y, mo] = m.split('-'); return MONTHS[parseInt(mo) - 1] + ` '${y.slice(2)}`; }),
@@ -660,7 +671,7 @@ function renderOverview(period) {
 
 // ── Schedule ─────────────────────────────────────────────────
 function renderSchedule() {
-  const today = new Date().toISOString().split('T')[0];
+  const today = calDateStr();
   const confirmed = bookings.filter((b) => b.status === 'confirmed');
   const upcoming = confirmed.filter((b) => b.date >= today).sort((a, b) => a.date.localeCompare(b.date) || a.time.localeCompare(b.time));
   const past = confirmed.filter((b) => b.date < today).sort((a, b) => b.date.localeCompare(a.date) || b.time.localeCompare(a.time));
@@ -720,7 +731,7 @@ function renderSchedule() {
 // ── Traffic ──────────────────────────────────────────────────
 function renderTraffic() {
   const views = stats.viewsByDay;
-  const totalThisMonth = Object.entries(views).filter(([d]) => d.startsWith(new Date().toISOString().slice(0, 7))).reduce((s, [, v]) => s + v, 0);
+  const totalThisMonth = Object.entries(views).filter(([d]) => d.startsWith(calDateStr().slice(0, 7))).reduce((s, [, v]) => s + v, 0);
   document.getElementById('main').innerHTML = `
     <div class="page-hdr" style="display:flex;align-items:flex-end;justify-content:space-between;gap:12px;flex-wrap:wrap">
       <div><h1>Website Traffic</h1><p>Visits tracked across all pages of your website</p></div>
@@ -969,7 +980,7 @@ function renderClients() {
             <td>${isNoShowOnly ? '—' : typeCell}</td>
             <td><div style="font-size:13px;color:var(--text2)">${topService ? topService[0] : '—'}</div>${Object.keys(c.services).length > 1 ? `<div style="font-size:11px;color:var(--text3);margin-top:2px">${allServices}</div>` : ''}${notesLine({ notes: c.latestNotes })}</td>
             <td style="color:var(--text3);font-size:12px">${fmtDate(c.firstVisit)}</td>
-            <td style="color:${c.lastVisit === new Date().toISOString().split('T')[0] ? 'var(--green)' : 'var(--text3)'};font-size:12px">${fmtDate(c.lastVisit)}</td>
+            <td style="color:${c.lastVisit === calDateStr() ? 'var(--green)' : 'var(--text3)'};font-size:12px">${fmtDate(c.lastVisit)}</td>
             <td><div style="display:flex;flex-direction:column;gap:6px">
               <button onclick="openEditClientModal('${c.key.replace(/'/g, "\\'")}')" style="padding:5px 11px;border-radius:7px;border:1.5px solid var(--text3);background:var(--bg3);color:var(--text3);font-family:inherit;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap">✎ Edit</button>
               ${c.phone !== '—' ? outreachBtn(c.phone, c.name, 'winback', true) : ''}
@@ -995,7 +1006,7 @@ function renderManualEntry() {
       <div class="form-row" style="grid-template-columns:1fr 1fr 1fr">
         <div class="field" style="margin:0"><label>Customer Name</label><input type="text" id="me-name" placeholder="Alex Johnson"/></div>
         <div class="field" style="margin:0"><label>Phone (optional)</label><input type="tel" id="me-phone" placeholder="+1 (403) 555-0123"/></div>
-        <div class="field" style="margin:0;min-width:130px"><label>Date</label><input type="date" id="me-date" value="${new Date().toISOString().split('T')[0]}"/></div>
+        <div class="field" style="margin:0;min-width:130px"><label>Date</label><input type="date" id="me-date" value="${calDateStr()}"/></div>
       </div>
 
       <div style="margin-top:16px" id="me-services-list"></div>
@@ -1293,7 +1304,7 @@ function blockScopeParam() { return currentBlockScope === 'master' ? null : curr
 
 function renderAvailability(scope) {
   if (scope) currentBlockScope = scope;
-  const today = new Date().toISOString().split('T')[0];
+  const today = calDateStr();
   const tabStyle = (s) => `padding:8px 18px;border-radius:8px;border:1.5px solid ${currentBlockScope === s ? 'var(--primary)' : 'var(--border2)'};background:${currentBlockScope === s ? 'var(--primary-glow)' : 'transparent'};color:${currentBlockScope === s ? 'var(--primary)' : 'var(--text2)'};font-family:inherit;font-size:13px;font-weight:600;cursor:pointer;transition:all 0.15s`;
   const isMaster = currentBlockScope === 'master';
   const tabs = `<div style="display:flex;gap:8px;margin-bottom:24px;flex-wrap:wrap">
@@ -1487,7 +1498,7 @@ function renderExpenses() {
         <div class="field" style="margin:0"><label>Description</label><input type="text" id="ex-desc" placeholder="e.g. Wax and supplies"/></div>
         <div class="field" style="margin:0"><label>Category</label><select id="ex-cat"><option>Supplies</option><option>Equipment</option><option>Vehicle / Fuel</option><option>Marketing</option><option>Software</option><option>Labor</option><option>Other</option></select></div>
         <div class="field" style="margin:0"><label>Amount ($)</label><input type="number" id="ex-amount" placeholder="49.99" min="0" step="0.01"/></div>
-        <div class="field" style="margin:0"><label>Date</label><input type="date" id="ex-date" value="${new Date().toISOString().split('T')[0]}"/></div>
+        <div class="field" style="margin:0"><label>Date</label><input type="date" id="ex-date" value="${calDateStr()}"/></div>
         <button class="btn-sm" onclick="addExpense()" style="height:44px;margin-top:20px">Add</button>
       </div>
       <div class="form-msg" id="ex-msg"></div>
